@@ -6,14 +6,12 @@ import "./_external/Ownable.sol";
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
 
+import "./interfaces/IOracle.sol";
+
 interface IUFragments {
     function totalSupply() external view returns (uint256);
 
     function rebase(uint256 epoch, int256 supplyDelta) external returns (uint256);
-}
-
-interface IOracle {
-    function getData() external returns (uint256, bool);
 }
 
 /**

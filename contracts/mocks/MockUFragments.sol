@@ -11,14 +11,13 @@ contract MockUFragments is Mock {
     }
 
     // Mock methods
-    function rebase(uint256 epoch, int256 supplyDelta) public returns (uint256) {
+    function rebase(uint256 newSupply) public returns (uint256) {
         emit FunctionCalled("UFragments", "rebase", msg.sender);
         uint256[] memory uintVals = new uint256[](1);
-        uintVals[0] = epoch;
-        int256[] memory intVals = new int256[](1);
-        intVals[0] = supplyDelta;
+        uintVals[0] = newSupply;
+        int256[] memory intVals = new int256[](0);
         emit FunctionArguments(uintVals, intVals);
-        return uint256(int256(_supply) + int256(supplyDelta));
+        return newSupply;
     }
 
     function totalSupply() public view returns (uint256) {

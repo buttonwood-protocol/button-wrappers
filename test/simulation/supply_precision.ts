@@ -30,7 +30,7 @@ async function exec() {
     console.log('Iteration', i + 1)
 
     preRebaseSupply = await uFragments.totalSupply()
-    await uFragments.connect(deployer).rebase(2 * i, 1)
+    await uFragments.connect(deployer).rebase(preRebaseSupply.add(1))
     postRebaseSupply = await uFragments.totalSupply()
     console.log('Rebased by 1 AMPL')
     console.log('Total supply is now', postRebaseSupply.toString(), 'AMPL')
@@ -39,7 +39,7 @@ async function exec() {
     expect(postRebaseSupply.sub(preRebaseSupply).toNumber()).to.eq(1)
 
     console.log('Doubling supply')
-    await uFragments.connect(deployer).rebase(2 * i + 1, postRebaseSupply)
+    await uFragments.connect(deployer).rebase(postRebaseSupply.mul(2))
     i++
   } while ((await uFragments.totalSupply()).lt(endSupply))
 }

@@ -80,7 +80,8 @@ async function exec() {
 
   let i = 0
   do {
-    await uFragments.connect(deployer).rebase(i + 1, rebaseAmt)
+    preRebaseSupply = await uFragments.totalSupply()
+    await uFragments.connect(deployer).rebase(preRebaseSupply.add(rebaseAmt))
     postRebaseSupply = await uFragments.totalSupply()
     i++
 

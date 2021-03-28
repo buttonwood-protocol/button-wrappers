@@ -18,7 +18,7 @@ contract ChainlinkOracle is IOracle {
 
     /**
      * @notice Fetches the latest market price from chainlink
-     * @return Value: Latest market price.
+     * @return Value: Latest market price as an 8 decimal fixed point number.
      *         valid: Boolean indicating an value was fetched successfully.
      */
     function getData() external override returns (uint256, bool) {

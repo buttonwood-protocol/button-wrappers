@@ -129,13 +129,16 @@ describe('UFragments:Rebase:accessControl', async () => {
   })
 
   it('should be callable by monetary policy', async function () {
-    await expect(uFragments.connect(user).rebase(1, transferAmount)).to.not.be
-      .reverted
+    const supply = await uFragments.totalSupply()
+    await expect(uFragments.connect(user).rebase(supply.add(transferAmount))).to
+      .not.be.reverted
   })
 
   it('should not be callable by others', async function () {
-    await expect(uFragments.connect(deployer).rebase(1, transferAmount)).to.be
-      .reverted
+    const supply = await uFragments.totalSupply()
+    await expect(
+      uFragments.connect(deployer).rebase(supply.add(transferAmount)),
+    ).to.be.reverted
   })
 })
 
@@ -177,9 +180,10 @@ describe('UFragments:Rebase:Expansion', async () => {
   })
 
   it('should emit Rebase', async function () {
-    await expect(uFragments.connect(policy).rebase(1, rebaseAmt))
+    const supply = await uFragments.totalSupply()
+    await expect(uFragments.connect(policy).rebase(supply.add(rebaseAmt)))
       .to.emit(uFragments, 'LogRebase')
-      .withArgs(1, initialSupply.add(rebaseAmt))
+      .withArgs(initialSupply.add(rebaseAmt))
   })
 
   it('should increase the totalSupply', async function () {
@@ -209,10 +213,11 @@ describe('UFragments:Rebase:Expansion', async () => {
   })
 
   it('should return the new supply', async function () {
+    const supply = await uFragments.totalSupply()
     const returnVal = await uFragments
       .connect(policy)
-      .callStatic.rebase(2, rebaseAmt)
-    await uFragments.connect(policy).rebase(2, rebaseAmt)
+      .callStatic.rebase(supply.add(rebaseAmt))
+    await uFragments.connect(policy).rebase(supply.add(rebaseAmt))
     expect(await uFragments.totalSupply()).to.eq(returnVal)
   })
 })
@@ -231,15 +236,16 @@ describe('UFragments:Rebase:Expansion', async function () {
       const totalSupply = await uFragments.totalSupply.call()
       await uFragments
         .connect(policy)
-        .rebase(1, MAX_SUPPLY.sub(totalSupply).sub(toUFrgDenomination('1')))
+        .rebase(MAX_SUPPLY.sub(toUFrgDenomination('1')))
     })
 
     it('should emit Rebase', async function () {
+      const supply = await uFragments.totalSupply()
       await expect(
-        uFragments.connect(policy).rebase(2, toUFrgDenomination('2')),
+        uFragments.connect(policy).rebase(supply.add(toUFrgDenomination('2'))),
       )
         .to.emit(uFragments, 'LogRebase')
-        .withArgs(2, MAX_SUPPLY)
+        .withArgs(MAX_SUPPLY)
     })
 
     it('should increase the totalSupply to MAX_SUPPLY', async function () {
@@ -253,11 +259,12 @@ describe('UFragments:Rebase:Expansion', async function () {
     })
 
     it('should emit Rebase', async function () {
+      const supply = await uFragments.totalSupply()
       await expect(
-        uFragments.connect(policy).rebase(3, toUFrgDenomination('2')),
+        uFragments.connect(policy).rebase(supply.add(toUFrgDenomination('2'))),
       )
         .to.emit(uFragments, 'LogRebase')
-        .withArgs(3, MAX_SUPPLY)
+        .withArgs(MAX_SUPPLY)
     })
 
     it('should NOT change the totalSupply', async function () {
@@ -303,9 +310,10 @@ describe('UFragments:Rebase:NoChange', function () {
   })
 
   it('should emit Rebase', async function () {
-    await expect(uFragments.connect(policy).rebase(1, 0))
+    const supply = await uFragments.totalSupply()
+    await expect(uFragments.connect(policy).rebase(supply))
       .to.emit(uFragments, 'LogRebase')
-      .withArgs(1, initialSupply)
+      .withArgs(initialSupply)
   })
 
   it('should NOT CHANGE the totalSupply', async function () {
@@ -373,9 +381,10 @@ describe('UFragments:Rebase:Contraction', function () {
   })
 
   it('should emit Rebase', async function () {
-    await expect(uFragments.connect(policy).rebase(1, -rebaseAmt))
+    const supply = await uFragments.totalSupply()
+    await expect(uFragments.connect(policy).rebase(supply.sub(rebaseAmt)))
       .to.emit(uFragments, 'LogRebase')
-      .withArgs(1, initialSupply.sub(rebaseAmt))
+      .withArgs(initialSupply.sub(rebaseAmt))
   })
 
   it('should decrease the totalSupply', async function () {

@@ -37,7 +37,7 @@ contract UFragments is ERC20Detailed, Ownable {
     using SafeMath for uint256;
     using SafeMathInt for int256;
 
-    event LogRebase(uint256 indexed epoch, uint256 totalSupply);
+    event LogRebase(uint256 totalSupply);
     event LogMonetaryPolicyUpdated(address monetaryPolicy);
 
     // Used for authentication
@@ -101,35 +101,28 @@ contract UFragments is ERC20Detailed, Ownable {
 
     /**
      * @dev Notifies Fragments contract about a new rebase cycle.
-     * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
+     * @param newSupply The requested new total number of fragment tokens.
      * @return The total number of fragments after the supply adjustment.
      */
-    function rebase(uint256 epoch, int256 supplyDelta)
-        external
-        onlyMonetaryPolicy
-        returns (uint256)
-    {
-        if (supplyDelta == 0) {
-            emit LogRebase(epoch, _totalSupply);
-            return _totalSupply;
+    function rebase(uint256 newSupply) external onlyMonetaryPolicy returns (uint256) {
+        uint256 previousSupply = _totalSupply;
+
+        if (newSupply == previousSupply) {
+            emit LogRebase(previousSupply);
+            return previousSupply;
         }
 
-        if (supplyDelta < 0) {
-            _totalSupply = _totalSupply.sub(uint256(supplyDelta.abs()));
-        } else {
-            _totalSupply = _totalSupply.add(uint256(supplyDelta));
+        if (newSupply > MAX_SUPPLY) {
+            newSupply = MAX_SUPPLY;
         }
 
-        if (_totalSupply > MAX_SUPPLY) {
-            _totalSupply = MAX_SUPPLY;
-        }
-
-        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+        _totalSupply = newSupply;
+        _gonsPerFragment = TOTAL_GONS.div(newSupply);
 
         // From this point forward, _gonsPerFragment is taken as the source of truth.
         // We recalculate a new _totalSupply to be in agreement with the _gonsPerFragment
         // conversion rate.
-        // This means our applied supplyDelta can deviate from the requested supplyDelta,
+        // This means our applied newSupply can deviate from the requested newSupply,
         // but this deviation is guaranteed to be < (_totalSupply^2)/(TOTAL_GONS - _totalSupply).
         //
         // In the case of _totalSupply <= MAX_UINT128 (our current supply cap), this
@@ -137,8 +130,8 @@ contract UFragments is ERC20Detailed, Ownable {
         // ever increased, it must be re-included.
         // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
-        emit LogRebase(epoch, _totalSupply);
-        return _totalSupply;
+        emit LogRebase(newSupply);
+        return newSupply;
     }
 
     function initialize(address owner_) public override initializer {

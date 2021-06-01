@@ -7,8 +7,6 @@ import '@nomiclabs/hardhat-etherscan'
 import 'solidity-coverage'
 import 'hardhat-gas-reporter'
 
-require('./scripts/deploy')
-
 export default {
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
@@ -34,19 +32,7 @@ export default {
             runs: 200,
           },
         },
-      },
-      {
-        version: '0.7.6',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
-      {
-        version: '0.4.24',
-      },
+      }
     ],
   },
   mocha: {

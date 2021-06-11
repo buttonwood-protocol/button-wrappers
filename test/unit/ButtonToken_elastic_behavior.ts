@@ -3,42 +3,57 @@ import { Contract, Signer, BigNumber } from 'ethers'
 import { TransactionResponse } from '@ethersproject/providers'
 import { expect } from 'chai'
 
-const DECIMALS = 9
-const INITIAL_SUPPLY = ethers.utils.parseUnits('50', 6 + DECIMALS)
-const MAX_UINT256 = ethers.BigNumber.from(2).pow(256).sub(1)
-const MAX_INT256 = ethers.BigNumber.from(2).pow(255).sub(1)
-const TOTAL_GONS = MAX_UINT256.sub(MAX_UINT256.mod(INITIAL_SUPPLY))
+const ORACLE_DECIMALS = 20
+const DECIMALS = 18
+const NAME = 'Button Bitcoin'
+const SYMBOL = 'BTN-BTC'
 
-const toUFrgDenomination = (ample: string): BigNumber =>
-  ethers.utils.parseUnits(ample, DECIMALS)
+const toOracleValue = (v: string): BigNumber =>
+  ethers.utils.parseUnits(v, ORACLE_DECIMALS)
 
-const unitTokenAmount = toUFrgDenomination('1')
+const toFixedPtAmt = (a: string): BigNumber =>
+  ethers.utils.parseUnits(a, DECIMALS)
+
+const INITIAL_SUPPLY = ethers.utils.parseUnits('50', DECIMALS)
+const unitTokenAmount = toFixedPtAmt('1')
 
 let token: Contract, owner: Signer, anotherAccount: Signer, recipient: Signer
 
-async function upgradeableToken() {
+async function setupToken() {
   const [owner, recipient, anotherAccount] = await ethers.getSigners()
-  const factory = await ethers.getContractFactory('UFragments')
-  const token = await upgrades.deployProxy(
-    factory.connect(owner),
-    [await owner.getAddress()],
-    {
-      initializer: 'initialize(address)',
-    },
-  )
+
+  const erc20Factory = await ethers.getContractFactory('MockERC20')
+  const mockBTC = await erc20Factory
+    .connect(owner)
+    .deploy('Wood Bitcoin', 'WOOD-BTC')
+
+  const oracleFactory = await ethers.getContractFactory('MockOracle')
+  const mockOracle = await oracleFactory.connect(owner).deploy()
+  await mockOracle.setData(toOracleValue('1'), true)
+
+  const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
+  token = await buttonTokenFactory
+    .connect(owner)
+    .deploy(mockBTC.address, NAME, SYMBOL, mockOracle.address)
+
+  await mockBTC.connect(owner).mint(await owner.getAddress(), INITIAL_SUPPLY)
+
+  await mockBTC.connect(owner).approve(token.address, INITIAL_SUPPLY)
+  await token.connect(owner).mint(await token.getExchangeRate(INITIAL_SUPPLY))
+
   return { token, owner, recipient, anotherAccount }
 }
 
-describe('UFragments:Elastic', () => {
-  beforeEach('setup UFragments contract', async function () {
+describe('Button:Elastic', () => {
+  beforeEach('setup Button contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
   describe('scaledTotalSupply', function () {
     it('returns the scaled total amount of tokens', async function () {
-      expect(await token.scaledTotalSupply()).to.eq(TOTAL_GONS)
+      expect(await token.scaledTotalSupply()).to.eq(INITIAL_SUPPLY)
     })
   })
 
@@ -54,17 +69,17 @@ describe('UFragments:Elastic', () => {
     describe('when the requested account has some tokens', function () {
       it('returns the total amount of tokens', async function () {
         expect(await token.scaledBalanceOf(await owner.getAddress())).to.eq(
-          TOTAL_GONS,
+          INITIAL_SUPPLY,
         )
       })
     })
   })
 })
 
-describe('UFragments:Elastic:transferAll', () => {
-  beforeEach('setup UFragments contract', async function () {
+describe('Button:Elastic:transferAll', () => {
+  beforeEach('setup Button contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
@@ -120,10 +135,10 @@ describe('UFragments:Elastic:transferAll', () => {
   })
 })
 
-describe('UFragments:Elastic:transferAllFrom', () => {
-  beforeEach('setup UFragments contract', async function () {
+describe('Button:Elastic:transferAllFrom', () => {
+  beforeEach('setup Button contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 

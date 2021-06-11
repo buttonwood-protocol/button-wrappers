@@ -32,7 +32,7 @@ export default {
             runs: 200,
           },
         },
-      }
+      },
     ],
   },
   mocha: {

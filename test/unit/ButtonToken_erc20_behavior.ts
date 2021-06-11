@@ -1,7 +1,9 @@
 /*
   MIT License
+
   Copyright (c) 2016 Smart Contract Solutions, Inc.
   Copyright (c) 2018 Fragments, Inc.
+
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
   in the Software without restriction, including without limitation the rights
@@ -17,7 +19,7 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
-  This file tests if the UFragments contract confirms to the ERC20 specification.
+  This file tests if the ButtonToken contract confirms to the ERC20 specification.
   These test cases are inspired from OpenZepplin's ERC20 unit test.
   https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/test/token/ERC20/ERC20.test.js
 */
@@ -27,13 +29,21 @@ import { Contract, Signer, BigNumber } from 'ethers'
 import { TransactionResponse } from '@ethersproject/providers'
 import { expect } from 'chai'
 
-const toUFrgDenomination = (ample: string): BigNumber =>
-  ethers.utils.parseUnits(ample, DECIMALS)
+const ORACLE_DECIMALS = 20
+const DECIMALS = 18
+const NAME = 'Button Bitcoin'
+const SYMBOL = 'BTN-BTC'
 
-const DECIMALS = 9
-const INITIAL_SUPPLY = ethers.utils.parseUnits('50', 6 + DECIMALS)
-const transferAmount = toUFrgDenomination('10')
-const unitTokenAmount = toUFrgDenomination('1')
+const toOracleValue = (v: string): BigNumber =>
+  ethers.utils.parseUnits(v, ORACLE_DECIMALS)
+
+const toFixedPtAmt = (a: string): BigNumber =>
+  ethers.utils.parseUnits(a, DECIMALS)
+
+const INITIAL_SUPPLY = ethers.utils.parseUnits('50', DECIMALS)
+const transferAmount = toFixedPtAmt('10')
+const unitTokenAmount = toFixedPtAmt('1')
+
 const overdraftAmount = INITIAL_SUPPLY.add(unitTokenAmount)
 const overdraftAmountPlusOne = overdraftAmount.add(unitTokenAmount)
 const overdraftAmountMinusOne = overdraftAmount.sub(unitTokenAmount)
@@ -42,23 +52,37 @@ const transferAmountMinusOne = transferAmount.sub(unitTokenAmount)
 
 let token: Contract, owner: Signer, anotherAccount: Signer, recipient: Signer
 
-async function upgradeableToken() {
+async function setupToken() {
   const [owner, recipient, anotherAccount] = await ethers.getSigners()
-  const factory = await ethers.getContractFactory('UFragments')
-  const token = await upgrades.deployProxy(
-    factory.connect(owner),
-    [await owner.getAddress()],
-    {
-      initializer: 'initialize(address)',
-    },
-  )
+
+  const erc20Factory = await ethers.getContractFactory('MockERC20')
+  const mockBTC = await erc20Factory
+    .connect(owner)
+    .deploy('Wood Bitcoin', 'WOOD-BTC')
+
+  const oracleFactory = await ethers.getContractFactory('MockOracle')
+  const mockOracle = await oracleFactory.connect(owner).deploy()
+  await mockOracle.setData(toOracleValue('1'), true)
+
+  const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
+  token = await buttonTokenFactory
+    .connect(owner)
+    .deploy(mockBTC.address, NAME, SYMBOL, mockOracle.address)
+
+  await mockBTC.connect(owner).mint(await owner.getAddress(), INITIAL_SUPPLY)
+
+  await mockBTC.connect(owner).approve(token.address, INITIAL_SUPPLY)
+  await token
+    .connect(owner)
+    .mint(INITIAL_SUPPLY)
+
   return { token, owner, recipient, anotherAccount }
 }
 
-describe('UFragments:ERC20', () => {
-  before('setup UFragments contract', async function () {
+describe('ButtonToken:ERC20', () => {
+  before('setup ButtonToken contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
@@ -87,10 +111,10 @@ describe('UFragments:ERC20', () => {
   })
 })
 
-describe('UFragments:ERC20:transfer', () => {
-  before('setup UFragments contract', async function () {
+describe('ButtonToken:ERC20:transfer', () => {
+  before('setup ButtonToken contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
@@ -141,10 +165,10 @@ describe('UFragments:ERC20:transfer', () => {
   })
 })
 
-describe('UFragments:ERC20:transferFrom', () => {
-  before('setup UFragments contract', async function () {
+describe('ButtonToken:ERC20:transferFrom', () => {
+  before('setup ButtonToken contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
@@ -250,10 +274,10 @@ describe('UFragments:ERC20:transferFrom', () => {
   })
 })
 
-describe('UFragments:ERC20:approve', () => {
-  before('setup UFragments contract', async function () {
+describe('ButtonToken:ERC20:approve', () => {
+  before('setup ButtonToken contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
@@ -296,7 +320,7 @@ describe('UFragments:ERC20:approve', () => {
         before(async function () {
           await token
             .connect(owner)
-            .approve(await anotherAccount.getAddress(), toUFrgDenomination('1'))
+            .approve(await anotherAccount.getAddress(), toFixedPtAmt('1'))
           r = token
             .connect(owner)
             .approve(await anotherAccount.getAddress(), transferAmount)
@@ -362,7 +386,7 @@ describe('UFragments:ERC20:approve', () => {
         before(async function () {
           await token
             .connect(owner)
-            .approve(await anotherAccount.getAddress(), toUFrgDenomination('1'))
+            .approve(await anotherAccount.getAddress(), toFixedPtAmt('1'))
           r = token
             .connect(owner)
             .approve(await anotherAccount.getAddress(), overdraftAmount)
@@ -392,10 +416,10 @@ describe('UFragments:ERC20:approve', () => {
   })
 })
 
-describe('UFragments:ERC20:increaseAllowance', () => {
-  before('setup UFragments contract', async function () {
+describe('ButtonToken:ERC20:increaseAllowance', () => {
+  before('setup ButtonToken contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 
@@ -545,10 +569,10 @@ describe('UFragments:ERC20:increaseAllowance', () => {
   })
 })
 
-describe('UFragments:ERC20:decreaseAllowance', () => {
-  before('setup UFragments contract', async function () {
+describe('ButtonToken:ERC20:decreaseAllowance', () => {
+  before('setup ButtonToken contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
-      upgradeableToken,
+      setupToken,
     ))
   })
 

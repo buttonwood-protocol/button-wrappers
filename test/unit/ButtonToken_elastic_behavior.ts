@@ -3,7 +3,7 @@ import { Contract, Signer, BigNumber } from 'ethers'
 import { TransactionResponse } from '@ethersproject/providers'
 import { expect } from 'chai'
 
-const ORACLE_DECIMALS = 20
+const ORACLE_DECIMALS = 8
 const DECIMALS = 18
 const NAME = 'Button Bitcoin'
 const SYMBOL = 'BTN-BTC'
@@ -39,7 +39,7 @@ async function setupToken() {
   await mockBTC.connect(owner).mint(await owner.getAddress(), INITIAL_SUPPLY)
 
   await mockBTC.connect(owner).approve(token.address, INITIAL_SUPPLY)
-  await token.connect(owner).mint(await token.getExchangeRate(INITIAL_SUPPLY))
+  await token.connect(owner).mint(await token.exchangeRate(INITIAL_SUPPLY))
 
   return { token, owner, recipient, anotherAccount }
 }

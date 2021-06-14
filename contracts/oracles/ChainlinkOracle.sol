@@ -4,9 +4,6 @@ pragma solidity 0.8.4;
 import "../interfaces/IOracle.sol";
 import "../interfaces/IChainlinkAggregator.sol";
 
-// TODO: The button token expects the price of a unit fixed point collateral
-// THIS contract needs to be fixed
-
 /**
  * @title Chainlink Oracle
  *

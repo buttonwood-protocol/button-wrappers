@@ -16,11 +16,6 @@ import {IOracle} from "./interfaces/IOracle.sol";
  *      Users deposit a collateral asset and are minted button tokens with elastic
  *      balances which change up or down when the value of the collateral changes.
  *
- *      An oracle provides contract the current USD price for 1 unit of the collateral asset.
- *      CRITICAL: eg) if price of 1 BTC is 33k USD and BTC ERC20 has 18 decimals
- *                    then 1 unit of collateral is 0.000000000000000001
- *                    and oracle price should be 0.000000000000033 USD
- *                        or "3300000" in fixed point with 20 PRICE_DECIMALS.
  *
  *      The ButtonToken math is almost identical to Ampleforth's μFragments.
  *
@@ -42,31 +37,32 @@ import {IOracle} from "./interfaces/IOracle.sol";
  *          -> public total supply       `_totalDeposits * p_u`
  *
  *
+ *      NOTE: Since the button token tries to keep the same number of decimal places as the
+ *      underlying collateral, converting from collateral amount to button token amount
+ *      and back is not loss-less.
  *
  */
 contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
-    // Similar to AMPL, we make the following guarantees:
-    // - If address 'A' mints x button tokens. A's resulting external balance will
-    //   increase precisely x button tokens.
-    // - If address 'A' burns x button tokens. A's resulting external balance will
-    //   decrease precisely x button tokens.
+    // We make the following guarantees:
     // - If address 'A' transfers x button tokens to address 'B'.
-    //   A's resulting external balance will be decreased by precisely x button tokens,
-    //   and B's external balance will be precisely increased by x button tokens.
-    //
-    // We do not guarantee that the sum of all balances equals the result of calling totalSupply().
-    // This is because, for any conversion function 'f()' that has non-zero rounding error,
-    // f(x0) + f(x1) + ... + f(xn) is not always equal to f(x0 + x1 + ... xn).
+    //   A's resulting external balance will be decreased by "precisely" x button tokens,
+    //   and B's external balance will be "precisely" increased by x button tokens.
+    // - If address 'A' mints x button tokens.
+    //   A's resulting external balance will increase by "precisely" x button tokens.
+    // - If address 'A' burns x button tokens.
+    //   A's resulting external balance will decrease by "precisely" x button tokens.
+    // - If the current quoted `exchangeRate` from collateral amount to button tokens
+    //   is x:y, then any address will be able to mint/burn "precisely" y button tokens for
+    //   "at the most" x collateral tokens.
     //
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     //--------------------------------------------------------------------------
     // Token Constants
-    // Say the collateral token has 18 decimals,
-    // The price a unit collateral token 1e-18, has a 2 decimal point precision (1 cent).
-    uint256 public constant PRICE_DECIMALS = 20;
+    // The price has a 8 decimal point precision.
+    uint256 public constant PRICE_DECIMALS = 8;
 
     // Math constants
     uint256 private constant MAX_UINT256 = type(uint256).max;
@@ -76,19 +72,19 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     uint256 public constant MAX_COLLATERAL = (10**27);
 
     // TOTAL_SHARES is a multiple of MAX_COLLATERAL so that
-    // {SHARES_PER_UNIT_COLLATERAL} is an integer.
+    // {SHARES_PER_UNIT_COLLATERAL} is an integer and.
     // Use the highest value that fits in a uint256 for max granularity.
-    uint256 public constant TOTAL_SHARES = MAX_UINT256 - (MAX_UINT256 % MAX_COLLATERAL);
+    uint256 private constant TOTAL_SHARES = MAX_UINT256 - (MAX_UINT256 % MAX_COLLATERAL);
 
     // Number of SHARES per unit of collateral
-    uint256 public constant SHARES_PER_UNIT_COLLATERAL = TOTAL_SHARES / MAX_COLLATERAL;
+    uint256 private constant SHARES_PER_UNIT_COLLATERAL = TOTAL_SHARES / MAX_COLLATERAL;
 
     // Number of SHARES per unit of collateral * (1 USD)
-    uint256 public constant PRICE_SHARES = SHARES_PER_UNIT_COLLATERAL * (10**PRICE_DECIMALS);
+    uint256 private constant PRICE_SHARES = SHARES_PER_UNIT_COLLATERAL * (10**PRICE_DECIMALS);
 
     // TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_SHARES + 1) - 1) / 2
     // Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE
-    uint256 private constant MAX_PRICE = (2**115 - 1); // (2^115) - 1
+    uint256 public constant MAX_PRICE = (2**96 - 1); // (2^96) - 1
 
     //--------------------------------------------------------------------------
     // ButtonToken attributes
@@ -114,11 +110,8 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     string private _name;
     string private _symbol;
 
-    // ratio of total shares to total tokens
-    uint256 public _sharesPerUnitToken;
-
     // Shares of the collateral pool issued per account
-    mapping(address => uint256) public _accountShares;
+    mapping(address => uint256) private _accountShares;
 
     // ERC20 allowances
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -153,13 +146,8 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         string memory symbol_,
         address priceOracle_
     ) {
-        // PRICE_DECIMALS has been fixed to 20, which means that
-        // For a unit collateral (0.000000000000000001 with 18 decimals),
-        // price can be at most 0.01 USD.
-        //
-        // NOTE: If the collateral token has more than 18 decimals,
-        // PRICE_DECIMALS has to be increased
-        // and MAX_PRICE and MAX_COLLATERAL need to be recalculated.
+        // NOTE: If the collateral token has different decimals,
+        // MAX_PRICE and MAX_COLLATERAL need to be recalculated.
         require(IERC20Detailed(asset_).decimals() <= 18, "ButtonToken: unsupported precision");
 
         asset = asset_;
@@ -240,14 +228,14 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
 
     //--------------------------------------------------------------------------
     // ERC-20 token view methods
+
     /**
      * @return The total supply of button tokens.
      */
     function totalSupply() external view override returns (uint256) {
         uint256 price;
         (, price) = _queryPrice();
-        uint256 sharesPerUnitToken = PRICE_SHARES.div(price);
-        return _activeShares().div(sharesPerUnitToken);
+        return _sharesToAmount(_activeShares(), price);
     }
 
     /**
@@ -259,15 +247,14 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         }
         uint256 price;
         (, price) = _queryPrice();
-        uint256 sharesPerUnitToken = PRICE_SHARES.div(price);
-        return _accountShares[account].div(sharesPerUnitToken);
+        return _sharesToAmount(_accountShares[account], price);
     }
 
     /**
      * @return The amount of collateral in the button token contract.
      */
     function scaledTotalSupply() external view returns (uint256) {
-        return _activeShares().div(SHARES_PER_UNIT_COLLATERAL);
+        return _sharesToCAmount(_activeShares());
     }
 
     /**
@@ -278,7 +265,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         if (account == address(0)) {
             return 0;
         }
-        return _accountShares[account].div(SHARES_PER_UNIT_COLLATERAL);
+        return _sharesToCAmount(_accountShares[account]);
     }
 
     /**
@@ -294,13 +281,18 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     //--------------------------------------------------------------------------
     // ButtonToken view methods
     /**
-     * @return The amount of button token units that can be exchanged,
+     * @return The amount of collateral tokens that can be exchanged,
      *         for the given collateral amount.
      */
-    function getExchangeRate(uint256 cAmount) external view returns (uint256) {
+    function exchangeRate(uint256 cAmount) external view returns (uint256) {
         uint256 price;
         (, price) = _queryPrice();
-        return cAmount.mul(price).div(10**PRICE_DECIMALS);
+        // Note: Picking the min of sa and sc ensures that:
+        // when going from {cAmount} to {amount} to {cAmount'} that {cAmount'} <= {cAmount}
+        uint256 sc = _cAmountToShares(cAmount);
+        uint256 sa = _amountToShares(_cAmountToAmount(cAmount, price), price);
+        uint256 shares = (sa <= sc) ? sa : sc;
+        return _sharesToAmount(shares, price);
     }
 
     //--------------------------------------------------------------------------
@@ -319,10 +311,11 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         onAfterRebase
         returns (bool)
     {
-        uint256 shares = amount.mul(_sharesPerUnitToken);
+        uint256 shares = _amountToShares(amount, currentPrice);
 
         _accountShares[msg.sender] = _accountShares[msg.sender].sub(shares);
         _accountShares[to] = _accountShares[to].add(shares);
+        _clearDustShares(msg.sender, to, currentPrice);
 
         emit Transfer(msg.sender, to, amount);
 
@@ -336,7 +329,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
      */
     function transferAll(address to) external validRecipient(to) onAfterRebase returns (bool) {
         uint256 shares = _accountShares[msg.sender];
-        uint256 amount = shares.div(_sharesPerUnitToken);
+        uint256 amount = _sharesToAmount(shares, currentPrice);
 
         delete _accountShares[msg.sender];
         _accountShares[to] = _accountShares[to].add(shares);
@@ -357,12 +350,13 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         address to,
         uint256 amount
     ) external override validRecipient(to) onAfterRebase returns (bool) {
-        uint256 shares = amount.mul(_sharesPerUnitToken);
+        uint256 shares = _amountToShares(amount, currentPrice);
 
         _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(amount);
 
         _accountShares[from] = _accountShares[from].sub(shares);
         _accountShares[to] = _accountShares[to].add(shares);
+        _clearDustShares(msg.sender, to, currentPrice);
 
         emit Transfer(from, to, amount);
 
@@ -381,7 +375,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         returns (bool)
     {
         uint256 shares = _accountShares[from];
-        uint256 amount = shares.div(_sharesPerUnitToken);
+        uint256 amount = _sharesToAmount(shares, currentPrice);
 
         _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(amount);
 
@@ -460,18 +454,25 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
      *
      * @param amount The amount of button tokens to be mint.
      */
-    function mint(uint256 amount) external onAfterRebase {
-        uint256 mintShares = amount.mul(_sharesPerUnitToken);
+    function mint(uint256 amount) external onAfterRebase returns (uint256) {
+        uint256 shares = _calcMintShares(_accountShares[msg.sender], amount, currentPrice);
+        uint256 cAmount = _sharesToCAmount(shares);
 
-        // require(_accountShares[address(0)] > mintShares,
-        //      "ButtonToken: cant deposit more than MAX_COLLATERAL");
-        _accountShares[address(0)] = _accountShares[address(0)].sub(mintShares);
-        _accountShares[msg.sender] = _accountShares[msg.sender].add(mintShares);
+        require(shares > 0 && cAmount > 0, "ButtonToken: too few button tokens to mint");
 
-        uint256 cAmount = mintShares.div(SHARES_PER_UNIT_COLLATERAL);
+        require(
+            _accountShares[address(0)] > shares,
+            "ButtonToken: cant deposit more than MAX_COLLATERAL"
+        );
+
+        _accountShares[address(0)] = _accountShares[address(0)].sub(shares);
+        _accountShares[msg.sender] = _accountShares[msg.sender].add(shares);
+
         IERC20(asset).safeTransferFrom(msg.sender, address(this), cAmount);
 
         emit Transfer(address(0), msg.sender, amount);
+
+        return cAmount;
     }
 
     /**
@@ -479,16 +480,41 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
      *
      * @param amount The amount of button tokens to be burnt.
      */
-    function burn(uint256 amount) external onAfterRebase {
-        uint256 burnShares = amount.mul(_sharesPerUnitToken);
+    function burn(uint256 amount) external onAfterRebase returns (uint256) {
+        uint256 shares = _amountToShares(amount, currentPrice);
+        uint256 cAmount = _sharesToCAmount(shares);
 
-        _accountShares[msg.sender] = _accountShares[msg.sender].sub(burnShares);
-        _accountShares[address(0)] = _accountShares[address(0)].add(burnShares);
+        require(shares > 0 && cAmount > 0, "ButtonToken: too few button tokens to burn");
+
+        _accountShares[msg.sender] = _accountShares[msg.sender].sub(shares);
+        _accountShares[address(0)] = _accountShares[address(0)].add(shares);
+        _clearDustShares(msg.sender, address(0), currentPrice);
 
         emit Transfer(msg.sender, address(0), amount);
 
-        uint256 cAmount = burnShares.div(SHARES_PER_UNIT_COLLATERAL);
         IERC20(asset).safeTransfer(msg.sender, cAmount);
+
+        return cAmount;
+    }
+
+    /**
+     * @dev Burns all button tokens from {msg.sender} and transfers collateral back.
+     */
+    function burnAll() external onAfterRebase returns (uint256) {
+        uint256 shares = _accountShares[msg.sender];
+        uint256 cAmount = _sharesToCAmount(shares);
+
+        require(shares > 0, "ButtonToken: too few button tokens to burn");
+
+        delete _accountShares[msg.sender];
+        _accountShares[address(0)] = _accountShares[address(0)].add(shares);
+
+        uint256 amount = _sharesToAmount(shares, currentPrice);
+        emit Transfer(msg.sender, address(0), amount);
+
+        IERC20(asset).safeTransfer(msg.sender, cAmount);
+
+        return cAmount;
     }
 
     //--------------------------------------------------------------------------
@@ -504,15 +530,29 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         currentPrice = price;
         lastPriceUpdateTimestampSec = block.timestamp;
 
-        _sharesPerUnitToken = PRICE_SHARES.div(price);
-
         emit Rebase(price);
+    }
+
+    /**
+     * @dev Cleans up dust shares from a given address.
+     */
+    function _clearDustShares(
+        address from,
+        address to,
+        uint256 price
+    ) private {
+        uint256 dustShares = _accountShares[from];
+        // less than 1 token worth shares
+        if (dustShares < _sharesPerUnitToken(price)) {
+            delete _accountShares[from];
+            _accountShares[to] = _accountShares[to].add(dustShares);
+        }
     }
 
     /**
      * @dev Returns the active "un-mined" shares
      */
-    function _activeShares() private view returns (uint256) {
+    function _activeShares() public view returns (uint256) {
         return TOTAL_SHARES.sub(_accountShares[address(0)]);
     }
 
@@ -536,5 +576,60 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         }
 
         return (true, price);
+    }
+
+    /**
+     * @dev Calculate shares to mint based on existing.
+     */
+    function _calcMintShares(
+        uint256 existing,
+        uint256 amount,
+        uint256 price
+    ) private pure returns (uint256) {
+        uint256 mintShares = _amountToShares(amount, price);
+        uint256 afterMint = existing.add(mintShares);
+        return mintShares.sub(afterMint.mod(_sharesPerUnitToken(price)));
+    }
+
+    /**
+     * @dev Convert button token amount to shares.
+     */
+    function _amountToShares(uint256 amount, uint256 price) private pure returns (uint256) {
+        return amount.mul(_sharesPerUnitToken(price));
+    }
+
+    /**
+     * @dev Convert collateral amount to shares.
+     */
+    function _cAmountToShares(uint256 cAmount) private pure returns (uint256) {
+        return cAmount.mul(SHARES_PER_UNIT_COLLATERAL);
+    }
+
+    /**
+     * @dev Convert shares to button token amount.
+     */
+    function _sharesToAmount(uint256 shares, uint256 price) private pure returns (uint256) {
+        return shares.div(_sharesPerUnitToken(price));
+    }
+
+    /**
+     * @dev Convert shares to collateral amount.
+     */
+    function _sharesToCAmount(uint256 shares) private pure returns (uint256) {
+        return shares.div(SHARES_PER_UNIT_COLLATERAL);
+    }
+
+    /**
+     * @dev Convert collateral amount to button token amount.
+     */
+    function _cAmountToAmount(uint256 cAmount, uint256 price) private pure returns (uint256) {
+        return cAmount.mul(price).div(10**PRICE_DECIMALS);
+    }
+
+    /**
+     * @dev Internal scalar to convert shares to button tokens.
+     */
+    function _sharesPerUnitToken(uint256 price) private pure returns (uint256) {
+        return PRICE_SHARES.div(price);
     }
 }

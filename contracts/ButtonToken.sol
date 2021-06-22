@@ -69,7 +69,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
 
     // The maximum units of collateral that can be deposited into this contract
     // ie) for a collateral token with 18 decimals, MAX_COLLATERAL is 1B tokens.
-    uint256 public constant MAX_COLLATERAL = (10**27);
+    uint256 public constant MAX_COLLATERAL = 1_000_000_000e18;
 
     // TOTAL_SHARES is a multiple of MAX_COLLATERAL so that
     // {SHARES_PER_UNIT_COLLATERAL} is an integer and.
@@ -146,7 +146,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         string memory symbol_,
         address priceOracle_
     ) {
-        // NOTE: If the collateral token has different decimals,
+        // NOTE: If the collateral token has more than 18 decimals,
         // MAX_PRICE and MAX_COLLATERAL need to be recalculated.
         require(IERC20Detailed(asset_).decimals() <= 18, "ButtonToken: unsupported precision");
 
@@ -281,7 +281,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     //--------------------------------------------------------------------------
     // ButtonToken view methods
     /**
-     * @return The amount of collateral tokens that can be exchanged,
+     * @return The amount of button tokens that can be exchanged,
      *         for the given collateral amount.
      */
     function exchangeRate(uint256 cAmount) external view returns (uint256) {

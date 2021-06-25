@@ -2,110 +2,200 @@
 pragma solidity 0.8.4;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Detailed} from "./interfaces/IERC20Detailed.sol";
-
-interface IOracle {
-    function getData() external view returns (uint256, bool);
-}
+import {IOracle} from "./interfaces/IOracle.sol";
 
 /**
  * @title The ButtonToken ERC20 wrapper.
  *
  * @dev The ButtonToken is a rebasing wrapper for fixed balance ERC-20 tokens.
- *      Token balances are elastic and change up or down when the value of the
- *      underlying collateral changes. An oracle informs the token about the
- *      value of the collateral held.
+ *      Users deposit a collateral asset and are minted button tokens with elastic
+ *      balances which change up or down when the value of the collateral changes.
  *
- *      FYI: cAmount -> "collateral" amount
- *           amount  -> "button token" amount
+ *
+ *      The ButtonToken math is almost identical to Ampleforth's μFragments.
+ *
+ *      For AMPL, internal balances are represented using `gons` and
+ *          -> internal account balance     `_gonBalances[account]`
+ *          -> internal supply scalar       `gonsPerFragment = TOTAL_GONS / _totalSupply`
+ *          -> public balance               `_gonBalances[account] * gonsPerFragment`
+ *          -> public total supply          `_totalSupply`
+ *
+ *      In our case internal balances are stored as 'bits'.
+ *          -> unit collateral price     `p_u = price / 10 ^ (PRICE_DECIMALS)`
+ *          -> collateral deposited      `_totalDeposits`
+ *          -> internal account balance  `_accountBits[account]`
+ *          -> internal supply scalar    `_bitsPerUnitToken = TOTAL_BITS / (MAX_COLLATERAL*p_u)`
+ *                                       `  = BITS_PER_UNIT_COLLATERAL*(10^PRICE_DECIMALS)/price`
+ *                                       `  = PRICE_BITS / price`
+ *          -> user's collateral balance `(_accountBits[account] / BITS_PER_UNIT_COLLATERAL`
+ *          -> public balance            `_accountBits[account] * _bitsPerUnitToken`
+ *          -> public total supply       `_totalDeposits * p_u`
+ *
+ *
+ *      NOTE: Since the button token tries to keep the same number of decimal places as the
+ *      underlying collateral, converting from collateral amount to button token amount
+ *      and back is not loss-less.
  *
  */
 contract ButtonToken is IERC20, IERC20Detailed, Ownable {
+    // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
+    // We make the following guarantees:
+    // - If address 'A' transfers x button tokens to address 'B'.
+    //   A's resulting external balance will be decreased by "precisely" x button tokens,
+    //   and B's external balance will be "precisely" increased by x button tokens.
+    // - If address 'A' mints x button tokens.
+    //   A's resulting external balance will increase by "precisely" x button tokens.
+    // - If address 'A' burns x button tokens.
+    //   A's resulting external balance will decrease by "precisely" x button tokens.
+    // - If the current quoted `exchangeRate` from collateral amount to button tokens
+    //   is x:y, then any address will be able to mint/burn "precisely" y button tokens for
+    //   "at the most" x collateral tokens.
+    //
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    // ERC-20 identity attributes:
-    string private _name;
-    string private _symbol;
+    //--------------------------------------------------------------------------
+    // Token Constants
+    // The price has a 8 decimal point precision.
+    uint256 public constant PRICE_DECIMALS = 8;
 
-    // ERC20 variables:
-    uint256 private _totalCollateral;
-    mapping(address => uint256) private _collateralBalances;
-    mapping(address => mapping(address => uint256)) private _allowances;
+    // Math constants
+    uint256 private constant MAX_UINT256 = type(uint256).max;
+
+    // The maximum units of collateral that can be deposited into this contract
+    // ie) for a collateral token with 18 decimals, MAX_COLLATERAL is 1B tokens.
+    uint256 public constant MAX_COLLATERAL = 1_000_000_000e18;
+
+    // TOTAL_BITS is a multiple of MAX_COLLATERAL so that
+    // {BITS_PER_UNIT_COLLATERAL} is an integer and.
+    // Use the highest value that fits in a uint256 for max granularity.
+    uint256 private constant TOTAL_BITS = MAX_UINT256 - (MAX_UINT256 % MAX_COLLATERAL);
+
+    // Number of BITS per unit of collateral
+    uint256 private constant BITS_PER_UNIT_COLLATERAL = TOTAL_BITS / MAX_COLLATERAL;
+
+    // Number of BITS per unit of collateral * (1 USD)
+    uint256 private constant PRICE_BITS = BITS_PER_UNIT_COLLATERAL * (10**PRICE_DECIMALS);
+
+    // TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_BITS + 1) - 1) / 2
+    // Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE
+    uint256 public constant MAX_PRICE = (2**96 - 1); // (2^96) - 1
+
+    //--------------------------------------------------------------------------
+    // ButtonToken attributes
 
     // The reference to the underlying asset.
     address public immutable asset;
 
-    // ButtonToken attributes:
+    // The reference to the price oracle which feeds in the
+    // price of the underlying asset.
+    address public priceOracle;
+
     // Most recent price recorded from the price oracle.
     uint256 public currentPrice;
 
     // The when the most recent price was updated.
-    uint256 public lastUpdateTimestampSec;
-
-    // ButtonToken hyper-parameters:
-    // The reference to the price oracle which feeds in the price of the underlying asset.
-    address public priceOracle;
+    uint256 public lastPriceUpdateTimestampSec;
 
     // The minimum time to be elapsed before reading a new price from the oracle.
-    uint256 public minUpdateIntervalSec;
+    uint256 public minPriceUpdateIntervalSec;
 
-    // Constants:
-    uint256 public constant ORACLE_PRICE_DECIMALS = 8;
+    //--------------------------------------------------------------------------
+    // ERC-20 identity attributes
+    string private _name;
+    string private _symbol;
 
-    // Modifiers:
+    // internal balance, bits issued per account
+    mapping(address => uint256) private _accountBits;
+
+    // ERC20 allowances
+    mapping(address => mapping(address => uint256)) private _allowances;
+
+    //--------------------------------------------------------------------------
+    // Events
+    event Rebase(uint256 newPrice);
+    event PriceOracleUpdated(address priceOracle);
+
+    //--------------------------------------------------------------------------
+    // Modifiers
     modifier validRecipient(address to) {
         require(to != address(0x0), "ButtonToken: recipient zero address");
         require(to != address(this), "ButtonToken: recipient token address");
         _;
     }
 
-    modifier validOracleSetup() {
-        require(priceOracle != address(0), "ButtonToken: price oracle not setup");
+    modifier onAfterRebase() {
+        uint256 price;
+        bool dirty;
+        (dirty, price) = _queryPrice();
+        if (dirty) {
+            _rebase(price);
+        }
         _;
     }
 
-    modifier afterPriceUpdate() {
-        _updatePrice();
-        _;
-    }
-
+    //--------------------------------------------------------------------------
     constructor(
         address asset_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        address priceOracle_
     ) {
+        // NOTE: If the collateral token has more than 18 decimals,
+        // MAX_PRICE and MAX_COLLATERAL need to be recalculated.
+        require(IERC20Detailed(asset_).decimals() <= 18, "ButtonToken: unsupported precision");
+
         asset = asset_;
         _name = name_;
         _symbol = symbol_;
+
+        minPriceUpdateIntervalSec = 3600; // 1hr
+
+        // MAX_COLLATERAL worth bits are 'pre-mined' to `address(0x)`
+        // at the time of construction.
+        //
+        // During mint, bits are transferred from `address(0x)`
+        // and during burn, bits are transferred back to `address(0x)`.
+        //
+        // No more than MAX_COLLATERAL can be deposited into the ButtonToken contract.
+        _accountBits[address(0)] = TOTAL_BITS;
+
+        resetPriceOracle(priceOracle_);
     }
 
-    // Administrative actions
+    //--------------------------------------------------------------------------
+    // ADMIN actions
 
     /**
-     * @dev Sets reference to the price oracle contract.
+     * @dev Update reference to the price oracle contract and resets price.
      * @param priceOracle_ The address of the new price oracle.
      */
-    function setPriceOracle(address priceOracle_) public onlyOwner {
-        bool dataValid;
-        (, dataValid) = IOracle(priceOracle_).getData();
-        require(dataValid, "ButtonToken: unable to fetch data from oracle");
+    function resetPriceOracle(address priceOracle_) public onlyOwner {
+        uint256 price;
+        bool v;
+        (price, v) = IOracle(priceOracle_).getData();
+        require(v, "ButtonToken: unable to fetch data from oracle");
 
         priceOracle = priceOracle_;
+        emit PriceOracleUpdated(priceOracle);
+
+        _rebase(price);
     }
 
     /**
-     * @dev Sets the minUpdateIntervalSec hyper-parameter.
-     * @param minUpdateIntervalSec_ The new price update interval.
+     * @dev Sets the minPriceUpdateIntervalSec hyper-parameter.
+     * @param minPriceUpdateIntervalSec_ The new price update interval.
      */
-    function setMinUpdateIntervalSec(uint256 minUpdateIntervalSec_) public onlyOwner {
-        minUpdateIntervalSec = minUpdateIntervalSec_;
+    function setMinUpdateIntervalSec(uint256 minPriceUpdateIntervalSec_) public onlyOwner {
+        minPriceUpdateIntervalSec = minPriceUpdateIntervalSec_;
     }
 
+    //--------------------------------------------------------------------------
     // ERC20 description attributes
 
     /**
@@ -136,27 +226,35 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         return IERC20Detailed(asset).decimals();
     }
 
+    //--------------------------------------------------------------------------
     // ERC-20 token view methods
 
     /**
      * @return The total supply of button tokens.
      */
     function totalSupply() external view override returns (uint256) {
-        return _collateralToTokens(_totalCollateral, _getOraclePrice());
-    }
-
-    /**
-     * @return The amount of collateral in the button token contract.
-     */
-    function scaledTotalSupply() external view returns (uint256) {
-        return _totalCollateral;
+        uint256 price;
+        (, price) = _queryPrice();
+        return _bitsToAmount(_activeBits(), price);
     }
 
     /**
      * @return The account's elastic button token balance.
      */
     function balanceOf(address account) external view override returns (uint256) {
-        return _collateralToTokens(_collateralBalances[account], _getOraclePrice());
+        if (account == address(0)) {
+            return 0;
+        }
+        uint256 price;
+        (, price) = _queryPrice();
+        return _bitsToAmount(_accountBits[account], price);
+    }
+
+    /**
+     * @return The amount of collateral in the button token contract.
+     */
+    function scaledTotalSupply() external view returns (uint256) {
+        return _bitsToCAmount(_activeBits());
     }
 
     /**
@@ -164,7 +262,10 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
      * @return The amount of collateral deposited by the account.
      */
     function scaledBalanceOf(address account) external view returns (uint256) {
-        return _collateralBalances[account];
+        if (account == address(0)) {
+            return 0;
+        }
+        return _bitsToCAmount(_accountBits[account]);
     }
 
     /**
@@ -177,15 +278,24 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         return _allowances[owner_][spender];
     }
 
+    //--------------------------------------------------------------------------
     // ButtonToken view methods
-
     /**
-     * @return The account's elastic button token balance.
+     * @return The amount of button tokens that can be exchanged,
+     *         for the given collateral amount.
      */
-    function getOraclePrice() public view returns (uint256) {
-        return _getOraclePrice();
+    function exchangeRate(uint256 cAmount) external view returns (uint256) {
+        uint256 price;
+        (, price) = _queryPrice();
+        // Note: Picking the min of sa and sc ensures that:
+        // when going from {cAmount} to {amount} to {cAmount'} that {cAmount'} <= {cAmount}
+        uint256 sc = _cAmountToBits(cAmount);
+        uint256 sa = _amountToBits(_cAmountToAmount(cAmount, price), price);
+        uint256 bits = (sa <= sc) ? sa : sc;
+        return _bitsToAmount(bits, price);
     }
 
+    //--------------------------------------------------------------------------
     // ERC-20 write methods
 
     /**
@@ -198,12 +308,18 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         external
         override
         validRecipient(to)
-        afterPriceUpdate
+        onAfterRebase
         returns (bool)
     {
-        return _transferCollateral(msg.sender, to,
-            _tokensToCollateral(amount, currentPrice),
-            currentPrice);
+        uint256 bits = _amountToBits(amount, currentPrice);
+
+        _accountBits[msg.sender] = _accountBits[msg.sender].sub(bits);
+        _accountBits[to] = _accountBits[to].add(bits);
+        _clearDust(msg.sender, currentPrice);
+
+        emit Transfer(msg.sender, to, amount);
+
+        return true;
     }
 
     /**
@@ -211,10 +327,16 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
      * @param to The address to transfer to.
      * @return True on success, false otherwise.
      */
-    function transferAll(address to) external validRecipient(to) afterPriceUpdate returns (bool) {
-        return _transferCollateral(msg.sender, to,
-            _collateralBalances[msg.sender],
-            currentPrice);
+    function transferAll(address to) external validRecipient(to) onAfterRebase returns (bool) {
+        uint256 bits = _accountBits[msg.sender];
+        uint256 amount = _bitsToAmount(bits, currentPrice);
+
+        delete _accountBits[msg.sender];
+        _accountBits[to] = _accountBits[to].add(bits);
+
+        emit Transfer(msg.sender, to, amount);
+
+        return true;
     }
 
     /**
@@ -227,13 +349,18 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         address from,
         address to,
         uint256 amount
-    ) external override validRecipient(to) afterPriceUpdate returns (bool) {
+    ) external override validRecipient(to) onAfterRebase returns (bool) {
+        uint256 bits = _amountToBits(amount, currentPrice);
 
         _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(amount);
 
-        return _transferCollateral(msg.sender, to,
-            _tokensToCollateral(amount, currentPrice),
-            currentPrice);
+        _accountBits[from] = _accountBits[from].sub(bits);
+        _accountBits[to] = _accountBits[to].add(bits);
+        _clearDust(msg.sender, currentPrice);
+
+        emit Transfer(from, to, amount);
+
+        return true;
     }
 
     /**
@@ -244,17 +371,20 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     function transferAllFrom(address from, address to)
         external
         validRecipient(to)
-        afterPriceUpdate
+        onAfterRebase
         returns (bool)
     {
-
-        uint256 amount = _collateralToTokens(_collateralBalances[from], currentPrice);
+        uint256 bits = _accountBits[from];
+        uint256 amount = _bitsToAmount(bits, currentPrice);
 
         _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(amount);
 
-        return _transferCollateral(msg.sender, to,
-            _allowances[from][msg.sender],
-            currentPrice);
+        delete _accountBits[from];
+        _accountBits[to] = _accountBits[to].add(bits);
+
+        emit Transfer(from, to, amount);
+
+        return true;
     }
 
     /**
@@ -285,9 +415,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
      * @param addedAmount The amount of button tokens to increase the allowance by.
      */
     function increaseAllowance(address spender, uint256 addedAmount) external returns (bool) {
-        _allowances[msg.sender][spender] = _allowances[msg.sender][spender].add(
-            addedAmount
-        );
+        _allowances[msg.sender][spender] = _allowances[msg.sender][spender].add(addedAmount);
 
         emit Approval(msg.sender, spender, _allowances[msg.sender][spender]);
         return true;
@@ -312,137 +440,192 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         return true;
     }
 
-
+    //--------------------------------------------------------------------------
     // ButtonToken write methods
-
     /**
-     * @dev Transfers collateral from {msg.sender} to the contract and mints button tokens.
-     *
-     * @param amount The amount of collateral to be deposited, dominated in button tokens.
+     * @dev Helper method to manually trigger rebase
      */
-    function deposit(uint256 amount) external afterPriceUpdate validOracleSetup {
-        uint256 cAmount = _tokensToCollateral(amount, currentPrice);
-
-        IERC20(asset).safeTransferFrom(msg.sender, address(this), cAmount);
-
-        _mintCollateral(msg.sender, cAmount, currentPrice);
+    function rebase() external onAfterRebase {
+        return;
     }
 
     /**
      * @dev Transfers collateral from {msg.sender} to the contract and mints button tokens.
      *
-     * @param cAmount The amount of collateral to be deposited.
+     * @param amount The amount of button tokens to be mint.
      */
-    function depositCollateral(uint256 cAmount) external afterPriceUpdate validOracleSetup {
+    function mint(uint256 amount) external onAfterRebase returns (uint256) {
+        uint256 bits = _calcMintBits(_accountBits[msg.sender], amount, currentPrice);
+        uint256 cAmount = _bitsToCAmount(bits);
+
+        require(bits > 0 && cAmount > 0, "ButtonToken: too few button tokens to mint");
+
+        require(
+            _accountBits[address(0)] > bits,
+            "ButtonToken: cant deposit more than MAX_COLLATERAL"
+        );
+
+        _accountBits[address(0)] = _accountBits[address(0)].sub(bits);
+        _accountBits[msg.sender] = _accountBits[msg.sender].add(bits);
+
         IERC20(asset).safeTransferFrom(msg.sender, address(this), cAmount);
 
-        _mintCollateral(msg.sender, cAmount, currentPrice);
+        emit Transfer(address(0), msg.sender, amount);
+
+        return cAmount;
     }
 
     /**
      * @dev Burns button tokens from {msg.sender} and transfers collateral back.
      *
-     * @param amount The amount of collateral to be released, dominated in button tokens.
+     * @param amount The amount of button tokens to be burnt.
      */
-    function withdraw(uint256 amount) external afterPriceUpdate {
-        uint256 cAmount = _tokensToCollateral(amount, currentPrice);
+    function burn(uint256 amount) external onAfterRebase returns (uint256) {
+        uint256 bits = _amountToBits(amount, currentPrice);
+        uint256 cAmount = _bitsToCAmount(bits);
 
-        _burnCollateral(msg.sender, cAmount, currentPrice);
+        require(bits > 0 && cAmount > 0, "ButtonToken: too few button tokens to burn");
+
+        _accountBits[msg.sender] = _accountBits[msg.sender].sub(bits);
+        _accountBits[address(0)] = _accountBits[address(0)].add(bits);
+        _clearDust(msg.sender, currentPrice);
+
+        emit Transfer(msg.sender, address(0), amount);
 
         IERC20(asset).safeTransfer(msg.sender, cAmount);
-    }
 
-    /**
-     * @dev Burns button tokens from {msg.sender} and transfers collateral back.
-     *
-     * @param cAmount The amount of collateral to be released.
-     */
-    function withdrawCollateral(uint256 cAmount) external afterPriceUpdate {
-        _burnCollateral(msg.sender, cAmount, currentPrice);
-
-        IERC20(asset).safeTransfer(msg.sender, cAmount);
+        return cAmount;
     }
 
     /**
      * @dev Burns all button tokens from {msg.sender} and transfers collateral back.
      */
-    function withdrawAll() external afterPriceUpdate {
-        _burnCollateral(msg.sender, _collateralBalances[msg.sender], currentPrice);
+    function burnAll() external onAfterRebase returns (uint256) {
+        uint256 bits = _accountBits[msg.sender];
+        uint256 cAmount = _bitsToCAmount(bits);
 
-        IERC20(asset).safeTransfer(msg.sender, _collateralBalances[msg.sender]);
+        require(bits > 0, "ButtonToken: too few button tokens to burn");
+
+        delete _accountBits[msg.sender];
+        _accountBits[address(0)] = _accountBits[address(0)].add(bits);
+
+        uint256 amount = _bitsToAmount(bits, currentPrice);
+        emit Transfer(msg.sender, address(0), amount);
+
+        IERC20(asset).safeTransfer(msg.sender, cAmount);
+
+        return cAmount;
     }
 
+    //--------------------------------------------------------------------------
     // Private methods
     /**
-     * @dev Internal book-keeping to transfer between tow accounts.
+     * @dev Updates the `currentPrice` and recomputes the internal scalar.
      */
-    function _transferCollateral(address from, address to, uint256 cAmount, uint256 price) private returns (bool) {
-        _collateralBalances[from] = _collateralBalances[from].sub(cAmount);
-        _collateralBalances[to] = _collateralBalances[to].add(cAmount);
-
-        emit Transfer(msg.sender, to,
-            _collateralToTokens(cAmount, price));
-
-        return true;
-    }
-
-    /**
-     * @dev Internal book-keeping to mint tokens.
-     */
-    function _mintCollateral(address to, uint256 cAmount, uint256 price) private {
-        _totalCollateral = _totalCollateral.add(cAmount);
-        _collateralBalances[to] = _collateralBalances[to].add(cAmount);
-
-        emit Transfer(address(0), to,
-            _collateralToTokens(cAmount, price));
-    }
-
-    /**
-     * @dev Internal book-keeping to burn tokens.
-     */
-    function _burnCollateral(address from, uint256 cAmount, uint256 price) private {
-        _collateralBalances[from] = _collateralBalances[from].sub(cAmount);
-        _totalCollateral = _totalCollateral.sub(cAmount);
-
-        emit Transfer(from, address(0),
-            _collateralToTokens(cAmount, price));
-    }
-
-    /**
-     * @dev If sufficient time has elapsed since last fetch,
-     *      Fetches the latest oracle price and updates the `currentPrice`.
-     */
-    function _updatePrice() private {
-        if (block.timestamp.sub(lastUpdateTimestampSec) < minUpdateIntervalSec) {
-            return;
+    function _rebase(uint256 price) private {
+        if (price > MAX_PRICE) {
+            price = MAX_PRICE;
         }
 
-        currentPrice = _getOraclePrice();
-        lastUpdateTimestampSec = block.timestamp;
+        currentPrice = price;
+        lastPriceUpdateTimestampSec = block.timestamp;
+
+        emit Rebase(price);
     }
 
     /**
-     * @dev Fetches the oracle price to be used. If the fetched price is not valid
-     *      returns the current price.
+     * @dev Cleans up dust bits from a given address.
      */
-    function _getOraclePrice() private view returns (uint256) {
-        uint256 newPrice;
+    function _clearDust(address from, uint256 price) private {
+        uint256 dustBits = _accountBits[from];
+        // less than 1 token worth bits
+        if (dustBits < _bitsPerUnitToken(price)) {
+            delete _accountBits[from];
+            _accountBits[address(0)] = _accountBits[address(0)].add(dustBits);
+        }
+    }
+
+    /**
+     * @dev Returns the active "un-mined" bits
+     */
+    function _activeBits() public view returns (uint256) {
+        return TOTAL_BITS.sub(_accountBits[address(0)]);
+    }
+
+    /**
+     * @dev Queries the oracle for the latest price
+     *      If sufficient time hasn't elapsed since the last pull,
+     *      returns the current price,
+     *      else If fetched oracle price isn't valid returns the current price,
+     *      else returns the fetched oracle price oracle price.
+     */
+    function _queryPrice() private view returns (bool, uint256) {
+        if (block.timestamp.sub(lastPriceUpdateTimestampSec) < minPriceUpdateIntervalSec) {
+            return (false, currentPrice);
+        }
+
+        uint256 price;
         bool dataValid;
-        (newPrice, dataValid) = IOracle(priceOracle).getData();
-        return (dataValid ? newPrice : currentPrice);
+        (price, dataValid) = IOracle(priceOracle).getData();
+        if (!dataValid) {
+            return (false, currentPrice);
+        }
+
+        return (true, price);
     }
 
     /**
-     * @dev Pure math to calculate token amount from collateral amount.
+     * @dev Calculate bits to mint based on existing.
      */
-    function _collateralToTokens(uint256 amount, uint256 price) private pure returns (uint256) {
-        return price.mul(amount).div(10**ORACLE_PRICE_DECIMALS);
+    function _calcMintBits(
+        uint256 existing,
+        uint256 amount,
+        uint256 price
+    ) private pure returns (uint256) {
+        uint256 mintBits = _amountToBits(amount, price);
+        uint256 afterMint = existing.add(mintBits);
+        return mintBits.sub(afterMint.mod(_bitsPerUnitToken(price)));
     }
 
     /**
-     * @dev Pure math to calculate collateral amount from token amount.
+     * @dev Convert button token amount to bits.
      */
-    function _tokensToCollateral(uint256 amount, uint256 price) private pure returns (uint256) {
-        return amount.mul(10**ORACLE_PRICE_DECIMALS).div(price);
+    function _amountToBits(uint256 amount, uint256 price) private pure returns (uint256) {
+        return amount.mul(_bitsPerUnitToken(price));
+    }
+
+    /**
+     * @dev Convert collateral amount to bits.
+     */
+    function _cAmountToBits(uint256 cAmount) private pure returns (uint256) {
+        return cAmount.mul(BITS_PER_UNIT_COLLATERAL);
+    }
+
+    /**
+     * @dev Convert bits to button token amount.
+     */
+    function _bitsToAmount(uint256 bits, uint256 price) private pure returns (uint256) {
+        return bits.div(_bitsPerUnitToken(price));
+    }
+
+    /**
+     * @dev Convert bits to collateral amount.
+     */
+    function _bitsToCAmount(uint256 bits) private pure returns (uint256) {
+        return bits.div(BITS_PER_UNIT_COLLATERAL);
+    }
+
+    /**
+     * @dev Convert collateral amount to button token amount.
+     */
+    function _cAmountToAmount(uint256 cAmount, uint256 price) private pure returns (uint256) {
+        return cAmount.mul(price).div(10**PRICE_DECIMALS);
+    }
+
+    /**
+     * @dev Internal scalar to convert bits to button tokens.
+     */
+    function _bitsPerUnitToken(uint256 price) private pure returns (uint256) {
+        return PRICE_BITS.div(price);
     }
 }

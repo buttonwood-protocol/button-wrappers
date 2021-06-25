@@ -32,11 +32,11 @@ export default {
             runs: 200,
           },
         },
-      }
+      },
     ],
   },
   mocha: {
-    timeout: 100000,
+    timeout: 1000000,
   },
   gasReporter: {
     currency: 'USD',

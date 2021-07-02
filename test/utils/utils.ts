@@ -8,9 +8,18 @@ export const imul = (a: BigNumberish, b: BigNumberish, c: BigNumberish) => {
   )
 }
 
+export const timeNow = async () => {
+  return (await ethers.provider.getBlock('latest')).timestamp
+}
+
 export const increaseTime = async (seconds: BigNumberish) => {
-  const now = (await ethers.provider.getBlock('latest')).timestamp
   await ethers.provider.send('evm_mine', [
-    ethers.BigNumber.from(seconds).add(now).toNumber(),
+    ethers.BigNumber.from(seconds)
+      .add(await timeNow())
+      .toNumber(),
   ])
+}
+
+export const setTime = async (time: BigNumberish) => {
+  await ethers.provider.send('evm_setNextBlockTimestamp', [time])
 }

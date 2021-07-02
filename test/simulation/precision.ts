@@ -152,7 +152,6 @@ async function exec() {
   buttonToken = await buttonTokenFactory
     .connect(deployer)
     .deploy(mockBTC.address, 'TEST', 'TEST', mockOracle.address)
-  await buttonToken.connect(deployer).setMinUpdateIntervalSec(0)
 
   await mockBTC
     .connect(deployer)

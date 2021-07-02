@@ -100,12 +100,6 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     // Most recent price recorded from the price oracle.
     uint256 public currentPrice;
 
-    // The when the most recent price was updated.
-    uint256 public lastPriceUpdateTimestampSec;
-
-    // The minimum time to be elapsed before reading a new price from the oracle.
-    uint256 public minPriceUpdateIntervalSec;
-
     //--------------------------------------------------------------------------
     // ERC-20 identity attributes
     string private _name;
@@ -119,7 +113,7 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
 
     //--------------------------------------------------------------------------
     // Events
-    event Rebase(uint256 newPrice);
+    event Rebase(uint256 newPrice, uint256 timestamp);
     event PriceOracleUpdated(address priceOracle);
 
     //--------------------------------------------------------------------------
@@ -155,8 +149,6 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         _name = name_;
         _symbol = symbol_;
 
-        minPriceUpdateIntervalSec = 3600; // 1hr
-
         // MAX_COLLATERAL worth bits are 'pre-mined' to `address(0x)`
         // at the time of construction.
         //
@@ -186,14 +178,6 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         emit PriceOracleUpdated(priceOracle);
 
         _rebase(price);
-    }
-
-    /**
-     * @dev Sets the minPriceUpdateIntervalSec hyper-parameter.
-     * @param minPriceUpdateIntervalSec_ The new price update interval.
-     */
-    function setMinUpdateIntervalSec(uint256 minPriceUpdateIntervalSec_) public onlyOwner {
-        minPriceUpdateIntervalSec = minPriceUpdateIntervalSec_;
     }
 
     //--------------------------------------------------------------------------
@@ -531,9 +515,8 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
         }
 
         currentPrice = price;
-        lastPriceUpdateTimestampSec = block.timestamp;
 
-        emit Rebase(price);
+        emit Rebase(price, block.timestamp);
     }
 
     /**
@@ -557,16 +540,10 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
 
     /**
      * @dev Queries the oracle for the latest price
-     *      If sufficient time hasn't elapsed since the last pull,
-     *      returns the current price,
-     *      else If fetched oracle price isn't valid returns the current price,
+     *      If fetched oracle price isn't valid returns the current price,
      *      else returns the fetched oracle price oracle price.
      */
     function _queryPrice() private view returns (bool, uint256) {
-        if (block.timestamp.sub(lastPriceUpdateTimestampSec) < minPriceUpdateIntervalSec) {
-            return (false, currentPrice);
-        }
-
         uint256 price;
         bool dataValid;
         (price, dataValid) = IOracle(priceOracle).getData();

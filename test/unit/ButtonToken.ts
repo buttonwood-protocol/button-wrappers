@@ -2,6 +2,8 @@ import { ethers, upgrades } from 'hardhat'
 import { Contract, Signer, BigNumber, BigNumberish } from 'ethers'
 import { expect } from 'chai'
 
+import { setTime, timeNow } from '../utils/utils'
+
 const PRICE_DECIMALS = 8
 const DECIMALS = 18
 const NAME = 'Button Bitcoin'
@@ -30,7 +32,8 @@ let accounts: Signer[],
   buttonToken: Contract,
   collateralSupply: BigNumber,
   cbA: BigNumber,
-  cbB: BigNumber
+  cbB: BigNumber,
+  nextRebaseTime: number
 
 async function setupContracts() {
   accounts = await ethers.getSigners()
@@ -99,8 +102,6 @@ describe('ButtonToken:Initialization', () => {
 
   it('should set the oracle price and reference', async function () {
     expect(await buttonToken.priceOracle()).to.eq(mockOracle.address)
-    expect(await buttonToken.lastPriceUpdateTimestampSec()).to.gte(0)
-    expect(await buttonToken.minPriceUpdateIntervalSec()).to.eq(3600)
   })
 })
 
@@ -138,39 +139,20 @@ describe('ButtonToken:resetPriceOracle', async () => {
       await mockOracle.setData(toOracleValue('45000'), true)
 
       expect(await buttonToken.priceOracle()).to.not.eq(mockOracle.address)
-      const timeBefore = await buttonToken.lastPriceUpdateTimestampSec()
+
+      nextRebaseTime = (await timeNow()) + 15
+      await setTime(nextRebaseTime)
 
       await expect(
         buttonToken.connect(deployer).resetPriceOracle(mockOracle.address),
       )
         .to.emit(buttonToken, 'Rebase')
-        .withArgs(toOracleValue('45000'))
+        .withArgs(toOracleValue('45000'), nextRebaseTime)
         .to.emit(buttonToken, 'PriceOracleUpdated')
         .withArgs(mockOracle.address)
 
       expect(await buttonToken.priceOracle()).to.eq(mockOracle.address)
-      expect(await buttonToken.lastPriceUpdateTimestampSec()).to.gte(timeBefore)
       expect(await buttonToken.currentPrice()).to.eq(toOracleValue('45000'))
-    })
-  })
-})
-
-describe('ButtonToken:setMinUpdateIntervalSec', async () => {
-  beforeEach('setup ButtonToken contract', setupContracts)
-
-  describe('when invoked by non owner', function () {
-    it('should revert', async function () {
-      await expect(
-        buttonToken.connect(userA).setMinUpdateIntervalSec(7200),
-      ).to.be.revertedWith('Ownable: caller is not the owner')
-    })
-  })
-
-  describe('when invoked by owner', function () {
-    it('should update minPriceUpdateIntervalSec', async function () {
-      expect(await buttonToken.minPriceUpdateIntervalSec()).to.not.eq(7200)
-      await buttonToken.connect(deployer).setMinUpdateIntervalSec(7200)
-      expect(await buttonToken.minPriceUpdateIntervalSec()).to.eq(7200)
     })
   })
 })
@@ -180,7 +162,6 @@ describe('ButtonToken:Rebase:Expansion', async () => {
   let r: any
   before('setup ButtonToken contract', async function () {
     await setupContracts()
-    await buttonToken.setMinUpdateIntervalSec(0)
 
     await mockBTC.connect(deployer).mint(deployerAddress, toFixedPtAmt('1'))
     await mockBTC
@@ -207,6 +188,8 @@ describe('ButtonToken:Rebase:Expansion', async () => {
     cbB = await buttonToken.scaledBalanceOf(userBAddress)
 
     await mockOracle.setData(toOracleValue('11000'), true)
+    nextRebaseTime = (await timeNow()) + 15
+    await setTime(nextRebaseTime)
     r = buttonToken.rebase()
     await r
   })
@@ -214,7 +197,7 @@ describe('ButtonToken:Rebase:Expansion', async () => {
   it('should emit Rebase', async function () {
     await expect(r)
       .to.emit(buttonToken, 'Rebase')
-      .withArgs(toOracleValue('11000'))
+      .withArgs(toOracleValue('11000'), nextRebaseTime)
   })
 
   it('should increase the totalSupply', async function () {
@@ -245,8 +228,6 @@ describe('ButtonToken:Rebase:Expansion', async function () {
     beforeEach('setup ButtonToken contract', async function () {
       await setupContracts()
 
-      await buttonToken.setMinUpdateIntervalSec(0)
-
       await mockBTC.connect(deployer).mint(deployerAddress, MINT_AMT)
       await mockBTC.connect(deployer).approve(buttonToken.address, MINT_AMT)
       await buttonToken
@@ -258,12 +239,16 @@ describe('ButtonToken:Rebase:Expansion', async function () {
       expect(await buttonToken.currentPrice()).to.eq(MAX_PRICE.sub(1))
 
       await mockOracle.setData(MAX_PRICE.add(1), true)
+      nextRebaseTime = (await timeNow()) + 15
+      await setTime(nextRebaseTime)
       r = buttonToken.connect(deployer).rebase()
       await r
     })
 
     it('should emit Rebase', async function () {
-      await expect(r).to.emit(buttonToken, 'Rebase').withArgs(MAX_PRICE)
+      await expect(r)
+        .to.emit(buttonToken, 'Rebase')
+        .withArgs(MAX_PRICE, nextRebaseTime)
     })
 
     it('should increase the price to MAX_PRICE', async function () {
@@ -279,8 +264,6 @@ describe('ButtonToken:Rebase:Expansion', async function () {
     beforeEach('setup ButtonToken contract', async function () {
       await setupContracts()
 
-      await buttonToken.setMinUpdateIntervalSec(0)
-
       await mockBTC.connect(deployer).mint(deployerAddress, MINT_AMT)
       await mockBTC.connect(deployer).approve(buttonToken.address, MINT_AMT)
       await buttonToken
@@ -291,12 +274,16 @@ describe('ButtonToken:Rebase:Expansion', async function () {
       await buttonToken.rebase()
 
       await mockOracle.setData(MAX_PRICE.add(1), true)
+      nextRebaseTime = (await timeNow()) + 15
+      await setTime(nextRebaseTime)
       r = buttonToken.connect(deployer).rebase()
       await r
     })
 
     it('should emit Rebase', async function () {
-      await expect(r).to.emit(buttonToken, 'Rebase').withArgs(MAX_PRICE)
+      await expect(r)
+        .to.emit(buttonToken, 'Rebase')
+        .withArgs(MAX_PRICE, nextRebaseTime)
     })
 
     it('should not change the price', async function () {
@@ -314,7 +301,6 @@ describe('ButtonToken:Rebase:NoChange', async () => {
   let r: any
   before('setup ButtonToken contract', async function () {
     await setupContracts()
-    await buttonToken.setMinUpdateIntervalSec(0)
 
     await mockBTC.connect(deployer).mint(deployerAddress, toFixedPtAmt('1'))
     await mockBTC
@@ -341,6 +327,8 @@ describe('ButtonToken:Rebase:NoChange', async () => {
     cbB = await buttonToken.scaledBalanceOf(userBAddress)
 
     await mockOracle.setData(toOracleValue('10000'), true)
+    nextRebaseTime = (await timeNow()) + 15
+    await setTime(nextRebaseTime)
     r = buttonToken.rebase()
     await r
   })
@@ -348,7 +336,7 @@ describe('ButtonToken:Rebase:NoChange', async () => {
   it('should emit Rebase', async function () {
     await expect(r)
       .to.emit(buttonToken, 'Rebase')
-      .withArgs(toOracleValue('10000'))
+      .withArgs(toOracleValue('10000'), nextRebaseTime)
   })
 
   it('should not change the totalSupply', async function () {
@@ -375,7 +363,6 @@ describe('ButtonToken:Rebase:Contraction', async () => {
   let r: any
   before('setup ButtonToken contract', async function () {
     await setupContracts()
-    await buttonToken.setMinUpdateIntervalSec(0)
 
     await mockBTC.connect(deployer).mint(deployerAddress, toFixedPtAmt('1'))
     await mockBTC
@@ -402,6 +389,8 @@ describe('ButtonToken:Rebase:Contraction', async () => {
     cbB = await buttonToken.scaledBalanceOf(userBAddress)
 
     await mockOracle.setData(toOracleValue('9000'), true)
+    nextRebaseTime = (await timeNow()) + 15
+    await setTime(nextRebaseTime)
     r = buttonToken.rebase()
     await r
   })
@@ -409,7 +398,7 @@ describe('ButtonToken:Rebase:Contraction', async () => {
   it('should emit Rebase', async function () {
     await expect(r)
       .to.emit(buttonToken, 'Rebase')
-      .withArgs(toOracleValue('9000'))
+      .withArgs(toOracleValue('9000'), nextRebaseTime)
   })
 
   it('should decrease the totalSupply', async function () {

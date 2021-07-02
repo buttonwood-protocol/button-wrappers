@@ -4,6 +4,7 @@ pragma solidity 0.8.4;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Detailed} from "./interfaces/IERC20Detailed.sol";
@@ -287,11 +288,13 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     function exchangeRate(uint256 cAmount) external view returns (uint256) {
         uint256 price;
         (, price) = _queryPrice();
-        // Note: Picking the min of sa and sc ensures that:
+        // Note: Picking the min ensures that:
         // when going from {cAmount} to {amount} to {cAmount'} that {cAmount'} <= {cAmount}
-        uint256 sc = _cAmountToBits(cAmount);
-        uint256 sa = _amountToBits(_cAmountToAmount(cAmount, price), price);
-        uint256 bits = (sa <= sc) ? sa : sc;
+        uint256 bits =
+            Math.min(
+                _cAmountToBits(cAmount),
+                _amountToBits(_cAmountToAmount(cAmount, price), price)
+            );
         return _bitsToAmount(bits, price);
     }
 

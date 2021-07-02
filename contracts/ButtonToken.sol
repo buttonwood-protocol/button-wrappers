@@ -282,20 +282,24 @@ contract ButtonToken is IERC20, IERC20Detailed, Ownable {
     //--------------------------------------------------------------------------
     // ButtonToken view methods
     /**
-     * @return The amount of button tokens that can be exchanged,
+     * @return The amount of button tokens that can be exchanged by {msg.sender},
      *         for the given collateral amount.
      */
     function exchangeRate(uint256 cAmount) external view returns (uint256) {
         uint256 price;
         (, price) = _queryPrice();
-        // Note: Picking the min ensures that:
+
+        // Note: Picking the min guarantees that:
         // when going from {cAmount} to {amount} to {cAmount'} that {cAmount'} <= {cAmount}
-        uint256 bits =
+        uint256 cBits = _cAmountToBits(cAmount);
+        uint256 aBits = _amountToBits(_cAmountToAmount(cAmount, price), price);
+        uint256 existing = _accountBits[msg.sender];
+        uint256 bitsToAdd =
             Math.min(
-                _cAmountToBits(cAmount),
-                _amountToBits(_cAmountToAmount(cAmount, price), price)
+                cBits.sub(existing.mod(BITS_PER_UNIT_COLLATERAL)),
+                aBits.sub(existing.mod(_bitsPerUnitToken(price)))
             );
-        return _bitsToAmount(bits, price);
+        return _bitsToAmount(bitsToAdd, price);
     }
 
     //--------------------------------------------------------------------------

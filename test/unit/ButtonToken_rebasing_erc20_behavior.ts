@@ -39,7 +39,7 @@ async function setupToken() {
   await mockBTC.connect(owner).mint(await owner.getAddress(), INITIAL_SUPPLY)
 
   await mockBTC.connect(owner).approve(token.address, INITIAL_SUPPLY)
-  await token.connect(owner).mint(await token.exchangeRate(INITIAL_SUPPLY))
+  await token.connect(owner).deposit(INITIAL_SUPPLY)
 
   return { token, owner, recipient, anotherAccount }
 }
@@ -58,6 +58,14 @@ describe('Button:Elastic', () => {
   })
 
   describe('scaledBalanceOf', function () {
+    describe('when the requested for zero account', function () {
+      it('returns zero', async function () {
+        expect(await token.scaledBalanceOf(ethers.constants.AddressZero)).to.eq(
+          0,
+        )
+      })
+    })
+
     describe('when the requested account has no tokens', function () {
       it('returns zero', async function () {
         expect(

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.4;
 
-import "../interfaces/IOracle.sol";
-import "../interfaces/IChainlinkAggregator.sol";
+import {IOracle} from "../interfaces/IOracle.sol";
+import {IChainlinkAggregator} from "../interfaces/IChainlinkAggregator.sol";
 
 /**
  * @title Chainlink Oracle

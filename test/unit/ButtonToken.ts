@@ -2,8 +2,6 @@ import { ethers, upgrades } from 'hardhat'
 import { Contract, Signer, BigNumber, BigNumberish } from 'ethers'
 import { expect } from 'chai'
 
-import { setTime, timeNow } from '../utils/utils'
-
 const PRICE_DECIMALS = 8
 const DECIMALS = 18
 const NAME = 'Button Bitcoin'
@@ -30,10 +28,9 @@ let accounts: Signer[],
   mockBTC: Contract,
   mockOracle: Contract,
   buttonToken: Contract,
-  collateralSupply: BigNumber,
+  underlyingSupply: BigNumber,
   cbA: BigNumber,
-  cbB: BigNumber,
-  nextRebaseTime: number
+  cbB: BigNumber
 
 async function setupContracts() {
   accounts = await ethers.getSigners()
@@ -83,8 +80,8 @@ describe('ButtonToken:Initialization', () => {
     expect(await buttonToken.owner()).to.eq(deployerAddress)
   })
 
-  it('should set the asset reference', async function () {
-    expect(await buttonToken.asset()).to.eq(mockBTC.address)
+  it('should set the underlying reference', async function () {
+    expect(await buttonToken.underlying()).to.eq(mockBTC.address)
   })
 
   it('should set detailed erc20 info parameters', async function () {
@@ -140,14 +137,11 @@ describe('ButtonToken:resetPriceOracle', async () => {
 
       expect(await buttonToken.priceOracle()).to.not.eq(mockOracle.address)
 
-      nextRebaseTime = (await timeNow()) + 15
-      await setTime(nextRebaseTime)
-
       await expect(
         buttonToken.connect(deployer).resetPriceOracle(mockOracle.address),
       )
         .to.emit(buttonToken, 'Rebase')
-        .withArgs(toOracleValue('45000'), nextRebaseTime)
+        .withArgs('2', toOracleValue('45000'))
         .to.emit(buttonToken, 'PriceOracleUpdated')
         .withArgs(mockOracle.address)
 
@@ -168,9 +162,7 @@ describe('ButtonToken:Rebase:Expansion', async () => {
       .connect(deployer)
       .approve(buttonToken.address, toFixedPtAmt('1'))
 
-    await buttonToken
-      .connect(deployer)
-      .mint(await buttonToken.exchangeRate(toFixedPtAmt('1')))
+    await buttonToken.connect(deployer).deposit(toFixedPtAmt('1'))
     await buttonToken
       .connect(deployer)
       .transfer(userAAddress, toFixedPtAmt('7500'))
@@ -183,13 +175,11 @@ describe('ButtonToken:Rebase:Expansion', async () => {
     eqAprox(await buttonToken.balanceOf(userAAddress), toFixedPtAmt('7500'))
     eqAprox(await buttonToken.balanceOf(userBAddress), toFixedPtAmt('2500'))
 
-    collateralSupply = await buttonToken.scaledTotalSupply()
+    underlyingSupply = await buttonToken.scaledTotalSupply()
     cbA = await buttonToken.scaledBalanceOf(userAAddress)
     cbB = await buttonToken.scaledBalanceOf(userBAddress)
 
     await mockOracle.setData(toOracleValue('11000'), true)
-    nextRebaseTime = (await timeNow()) + 15
-    await setTime(nextRebaseTime)
     r = buttonToken.rebase()
     await r
   })
@@ -197,7 +187,7 @@ describe('ButtonToken:Rebase:Expansion', async () => {
   it('should emit Rebase', async function () {
     await expect(r)
       .to.emit(buttonToken, 'Rebase')
-      .withArgs(toOracleValue('11000'), nextRebaseTime)
+      .withArgs('5', toOracleValue('11000'))
   })
 
   it('should increase the totalSupply', async function () {
@@ -205,7 +195,7 @@ describe('ButtonToken:Rebase:Expansion', async () => {
   })
 
   it('should NOT CHANGE the scaledTotalSupply', async function () {
-    expect(await buttonToken.scaledTotalSupply()).to.eq(collateralSupply)
+    expect(await buttonToken.scaledTotalSupply()).to.eq(underlyingSupply)
   })
 
   it('should increase individual balances', async function () {
@@ -230,25 +220,19 @@ describe('ButtonToken:Rebase:Expansion', async function () {
 
       await mockBTC.connect(deployer).mint(deployerAddress, MINT_AMT)
       await mockBTC.connect(deployer).approve(buttonToken.address, MINT_AMT)
-      await buttonToken
-        .connect(deployer)
-        .mint(await buttonToken.exchangeRate(MINT_AMT))
+      await buttonToken.connect(deployer).deposit(MINT_AMT)
 
       await mockOracle.setData(MAX_PRICE.sub(1), true)
       await buttonToken.rebase()
       expect(await buttonToken.currentPrice()).to.eq(MAX_PRICE.sub(1))
 
       await mockOracle.setData(MAX_PRICE.add(1), true)
-      nextRebaseTime = (await timeNow()) + 15
-      await setTime(nextRebaseTime)
       r = buttonToken.connect(deployer).rebase()
       await r
     })
 
     it('should emit Rebase', async function () {
-      await expect(r)
-        .to.emit(buttonToken, 'Rebase')
-        .withArgs(MAX_PRICE, nextRebaseTime)
+      await expect(r).to.emit(buttonToken, 'Rebase').withArgs('4', MAX_PRICE)
     })
 
     it('should increase the price to MAX_PRICE', async function () {
@@ -266,24 +250,18 @@ describe('ButtonToken:Rebase:Expansion', async function () {
 
       await mockBTC.connect(deployer).mint(deployerAddress, MINT_AMT)
       await mockBTC.connect(deployer).approve(buttonToken.address, MINT_AMT)
-      await buttonToken
-        .connect(deployer)
-        .mint(await buttonToken.exchangeRate(MINT_AMT))
+      await buttonToken.connect(deployer).deposit(MINT_AMT)
 
       await mockOracle.setData(MAX_PRICE, true)
       await buttonToken.rebase()
 
       await mockOracle.setData(MAX_PRICE.add(1), true)
-      nextRebaseTime = (await timeNow()) + 15
-      await setTime(nextRebaseTime)
       r = buttonToken.connect(deployer).rebase()
       await r
     })
 
     it('should emit Rebase', async function () {
-      await expect(r)
-        .to.emit(buttonToken, 'Rebase')
-        .withArgs(MAX_PRICE, nextRebaseTime)
+      await expect(r).to.emit(buttonToken, 'Rebase').withArgs('4', MAX_PRICE)
     })
 
     it('should not change the price', async function () {
@@ -307,9 +285,7 @@ describe('ButtonToken:Rebase:NoChange', async () => {
       .connect(deployer)
       .approve(buttonToken.address, toFixedPtAmt('1'))
 
-    await buttonToken
-      .connect(deployer)
-      .mint(await buttonToken.exchangeRate(toFixedPtAmt('1')))
+    await buttonToken.connect(deployer).deposit(toFixedPtAmt('1'))
     await buttonToken
       .connect(deployer)
       .transfer(userAAddress, toFixedPtAmt('7500'))
@@ -322,13 +298,11 @@ describe('ButtonToken:Rebase:NoChange', async () => {
     eqAprox(await buttonToken.balanceOf(userAAddress), toFixedPtAmt('7500'))
     eqAprox(await buttonToken.balanceOf(userBAddress), toFixedPtAmt('2500'))
 
-    collateralSupply = await buttonToken.scaledTotalSupply()
+    underlyingSupply = await buttonToken.scaledTotalSupply()
     cbA = await buttonToken.scaledBalanceOf(userAAddress)
     cbB = await buttonToken.scaledBalanceOf(userBAddress)
 
     await mockOracle.setData(toOracleValue('10000'), true)
-    nextRebaseTime = (await timeNow()) + 15
-    await setTime(nextRebaseTime)
     r = buttonToken.rebase()
     await r
   })
@@ -336,7 +310,7 @@ describe('ButtonToken:Rebase:NoChange', async () => {
   it('should emit Rebase', async function () {
     await expect(r)
       .to.emit(buttonToken, 'Rebase')
-      .withArgs(toOracleValue('10000'), nextRebaseTime)
+      .withArgs('5', toOracleValue('10000'))
   })
 
   it('should not change the totalSupply', async function () {
@@ -344,7 +318,7 @@ describe('ButtonToken:Rebase:NoChange', async () => {
   })
 
   it('should NOT CHANGE the scaledTotalSupply', async function () {
-    expect(await buttonToken.scaledTotalSupply()).to.eq(collateralSupply)
+    expect(await buttonToken.scaledTotalSupply()).to.eq(underlyingSupply)
   })
 
   it('should not change individual balances', async function () {
@@ -369,9 +343,7 @@ describe('ButtonToken:Rebase:Contraction', async () => {
       .connect(deployer)
       .approve(buttonToken.address, toFixedPtAmt('1'))
 
-    await buttonToken
-      .connect(deployer)
-      .mint(await buttonToken.exchangeRate(toFixedPtAmt('1')))
+    await buttonToken.connect(deployer).deposit(toFixedPtAmt('1'))
     await buttonToken
       .connect(deployer)
       .transfer(userAAddress, toFixedPtAmt('7500'))
@@ -384,13 +356,11 @@ describe('ButtonToken:Rebase:Contraction', async () => {
     eqAprox(await buttonToken.balanceOf(userAAddress), toFixedPtAmt('7500'))
     eqAprox(await buttonToken.balanceOf(userBAddress), toFixedPtAmt('2500'))
 
-    collateralSupply = await buttonToken.scaledTotalSupply()
+    underlyingSupply = await buttonToken.scaledTotalSupply()
     cbA = await buttonToken.scaledBalanceOf(userAAddress)
     cbB = await buttonToken.scaledBalanceOf(userBAddress)
 
     await mockOracle.setData(toOracleValue('9000'), true)
-    nextRebaseTime = (await timeNow()) + 15
-    await setTime(nextRebaseTime)
     r = buttonToken.rebase()
     await r
   })
@@ -398,7 +368,7 @@ describe('ButtonToken:Rebase:Contraction', async () => {
   it('should emit Rebase', async function () {
     await expect(r)
       .to.emit(buttonToken, 'Rebase')
-      .withArgs(toOracleValue('9000'), nextRebaseTime)
+      .withArgs('5', toOracleValue('9000'))
   })
 
   it('should decrease the totalSupply', async function () {
@@ -406,7 +376,7 @@ describe('ButtonToken:Rebase:Contraction', async () => {
   })
 
   it('should NOT CHANGE the scaledTotalSupply', async function () {
-    expect(await buttonToken.scaledTotalSupply()).to.eq(collateralSupply)
+    expect(await buttonToken.scaledTotalSupply()).to.eq(underlyingSupply)
   })
 
   it('should decrease individual balances', async function () {
@@ -428,9 +398,7 @@ describe('ButtonToken:Transfer', function () {
     await mockBTC
       .connect(deployer)
       .approve(buttonToken.address, toFixedPtAmt('1'))
-    await buttonToken
-      .connect(deployer)
-      .mint(await buttonToken.exchangeRate(toFixedPtAmt('1')))
+    await buttonToken.connect(deployer).deposit(toFixedPtAmt('1'))
   })
 
   describe('deployer transfers 12 to A', function () {

@@ -22,9 +22,7 @@ let accounts: Signer[],
   mockOracle: Contract,
   buttonToken: Contract,
   cAmount: BigNumber,
-  depositedCAmount: BigNumber,
-  mintAmt: BigNumber,
-  burnAmt: BigNumber
+  withdrawCAmount: BigNumber
 
 async function setupContracts() {
   accounts = await ethers.getSigners()
@@ -49,7 +47,14 @@ async function setupContracts() {
     .deploy(mockBTC.address, NAME, SYMBOL, mockOracle.address)
 }
 
-describe('ButtonToken:mint', async () => {
+describe('ButtonToken:underlying', async () => {
+  it('should set the correct value', async function () {
+    await setupContracts()
+    expect(await buttonToken.underlying()).to.eq(mockBTC.address)
+  })
+})
+
+describe('ButtonToken:deposit', async () => {
   describe('without sufficient approval', async function () {
     it('should revert', async function () {
       await setupContracts()
@@ -60,11 +65,8 @@ describe('ButtonToken:mint', async () => {
         .connect(userA)
         .approve(buttonToken.address, toFixedPtAmt('0.99'))
 
-      await expect(
-        buttonToken
-          .connect(userA)
-          .mint(await buttonToken.exchangeRate(toFixedPtAmt('1'))),
-      ).to.be.reverted
+      await expect(buttonToken.connect(userA).deposit(toFixedPtAmt('1'))).to.be
+        .reverted
     })
   })
 
@@ -78,21 +80,18 @@ describe('ButtonToken:mint', async () => {
         .connect(userA)
         .approve(buttonToken.address, toFixedPtAmt('1'))
 
-      await expect(
-        buttonToken
-          .connect(userA)
-          .mint(await buttonToken.exchangeRate(toFixedPtAmt('2'))),
-      ).to.be.reverted
+      await expect(buttonToken.connect(userA).deposit(toFixedPtAmt('2'))).to.be
+        .reverted
     })
   })
 
-  describe('When mint amount is > MAX_COLLATERAL', async function () {
+  describe('When deposit amount is > MAX_UNDERLYING', async function () {
     it('should not be reverted', async function () {
       await setupContracts()
 
-      cAmount = (await buttonToken.MAX_COLLATERAL()).add(1)
+      cAmount = (await buttonToken.MAX_UNDERLYING()).add(1)
 
-      mintAmt = cAmount
+      const mintAmt = cAmount
         .mul(await buttonToken.currentPrice())
         .div(BigNumber.from(10).pow(PRICE_DECIMALS))
 
@@ -100,28 +99,27 @@ describe('ButtonToken:mint', async () => {
 
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-      await expect(buttonToken.connect(userA).mint(mintAmt)).to.be.reverted
+      await expect(buttonToken.connect(userA).deposit(mintAmt)).to.be.reverted
     })
   })
 
-  describe('When mint amount < MAX_COLLATERAL', async function () {
+  describe('When deposit amount < MAX_UNDERLYING', async function () {
     it('should not be reverted', async function () {
       await setupContracts()
 
-      const MAX_COLLATERAL = await buttonToken.MAX_COLLATERAL()
-      const cAmount = MAX_COLLATERAL.sub(1)
+      const MAX_UNDERLYING = await buttonToken.MAX_UNDERLYING()
+      const cAmount = MAX_UNDERLYING.sub(1)
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
 
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-      const mintAmt = await buttonToken.exchangeRate(cAmount)
-
-      await expect(buttonToken.connect(userA).mint(mintAmt)).not.to.be.reverted
+      await expect(buttonToken.connect(userA).deposit(cAmount)).not.to.be
+        .reverted
     })
   })
 
-  describe('When mint amount zero', async function () {
+  describe('When deposit amount zero', async function () {
     it('should be reverted', async function () {
       await setupContracts()
 
@@ -130,65 +128,67 @@ describe('ButtonToken:mint', async () => {
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-      await expect(buttonToken.connect(userA).mint('0')).to.be.reverted
+      await expect(buttonToken.connect(userA).deposit('0')).to.be.reverted
     })
   })
 
-  describe('When mint amount < unit amount', async function () {
+  describe('When deposit < unit amount', async function () {
     it('should be reverted', async function () {
       await setupContracts()
 
       cAmount = BigNumber.from('1')
+      await mockOracle.setData('123', true)
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-      await expect(buttonToken.connect(userA).mint('1')).to.be.reverted
+      await expect(buttonToken.connect(userA).deposit(cAmount)).to.be.reverted
     })
   })
 
-  describe('When mint amount is a small amount', async function () {
+  describe('When deposit amount unit amount', async function () {
     beforeEach('setup ButtonToken contract', async () => {
       await setupContracts()
 
-      cAmount = BigNumber.from('2')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
+      cAmount = BigNumber.from('1')
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
     })
 
-    it('should transfer collateral from the user', async function () {
+    it('should transfer underlying from the user', async function () {
       expect(await mockBTC.balanceOf(userAAddress)).to.eq(cAmount)
       expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
 
-      depositedCAmount = await buttonToken
-        .connect(userA)
-        .callStatic.mint(mintAmt)
-      await expect(buttonToken.connect(userA).mint(mintAmt))
-        .to.emit(mockBTC, 'Transfer')
-        .withArgs(userAAddress, buttonToken.address, depositedCAmount)
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+      expect(await buttonToken.totalUnderlying()).to.eq('0')
 
-      expect(await mockBTC.balanceOf(userAAddress)).to.eq(
-        cAmount.sub(depositedCAmount),
-      )
-      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(
-        depositedCAmount,
-      )
+      await expect(buttonToken.connect(userA).deposit(cAmount))
+        .to.emit(mockBTC, 'Transfer')
+        .withArgs(userAAddress, buttonToken.address, cAmount)
+
+      expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
+
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+      expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
     })
 
-    it('should mint button tokens', async function () {
+    it('should deposit button tokens', async function () {
       expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
 
-      await buttonToken.connect(userA).mint(mintAmt)
+      expect(
+        await buttonToken.connect(userA).callStatic.deposit(cAmount),
+      ).to.eq('10000')
+      await buttonToken.connect(userA).deposit(cAmount)
 
-      expect(await buttonToken.balanceOf(userAAddress)).to.eq(mintAmt)
+      expect(await buttonToken.balanceOf(userAAddress)).to.eq('10000')
     })
 
     it('should emit transfer log', async function () {
-      await expect(buttonToken.connect(userA).mint(mintAmt))
+      await expect(buttonToken.connect(userA).deposit(cAmount))
         .to.emit(buttonToken, 'Transfer')
-        .withArgs(ethers.constants.AddressZero, userAAddress, mintAmt)
+        .withArgs(ethers.constants.AddressZero, userAAddress, '10000')
     })
   })
 
@@ -200,33 +200,34 @@ describe('ButtonToken:mint', async () => {
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
 
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
-
-      mintAmt = await buttonToken.exchangeRate(cAmount)
     })
 
-    it('should transfer collateral from the user', async function () {
+    it('should transfer underlying from the user', async function () {
       expect(await mockBTC.balanceOf(userAAddress)).to.eq(cAmount)
       expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
 
-      depositedCAmount = await buttonToken
-        .connect(userA)
-        .callStatic.mint(mintAmt)
-      await expect(buttonToken.connect(userA).mint(mintAmt))
-        .to.emit(mockBTC, 'Transfer')
-        .withArgs(userAAddress, buttonToken.address, depositedCAmount)
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+      expect(await buttonToken.totalUnderlying()).to.eq('0')
 
-      expect(await mockBTC.balanceOf(userAAddress)).to.eq(
-        cAmount.sub(depositedCAmount),
-      )
-      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(
-        depositedCAmount,
-      )
+      await expect(buttonToken.connect(userA).deposit(cAmount))
+        .to.emit(mockBTC, 'Transfer')
+        .withArgs(userAAddress, buttonToken.address, cAmount)
+
+      expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
+
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+      expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
     })
 
-    it('should mint button tokens', async function () {
+    it('should deposit button tokens', async function () {
       expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
 
-      await buttonToken.connect(userA).mint(mintAmt)
+      expect(
+        await buttonToken.connect(userA).callStatic.deposit(cAmount),
+      ).to.eq(toFixedPtAmt('10000'))
+
+      await buttonToken.connect(userA).deposit(cAmount)
 
       expect(await buttonToken.balanceOf(userAAddress)).to.eq(
         toFixedPtAmt('10000'),
@@ -234,7 +235,7 @@ describe('ButtonToken:mint', async () => {
     })
 
     it('should emit transfer log', async function () {
-      await expect(buttonToken.connect(userA).mint(mintAmt))
+      await expect(buttonToken.connect(userA).deposit(cAmount))
         .to.emit(buttonToken, 'Transfer')
         .withArgs(
           ethers.constants.AddressZero,
@@ -245,120 +246,118 @@ describe('ButtonToken:mint', async () => {
   })
 })
 
-describe('ButtonToken:burn', async () => {
-  describe('When burn amount zero', async function () {
+describe('ButtonToken:withdraw', async () => {
+  describe('When withdraw amount zero', async function () {
     it('should be reverted', async function () {
       await setupContracts()
 
       cAmount = toFixedPtAmt('1')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
-      burnAmt = BigNumber.from('0')
+      withdrawCAmount = BigNumber.from('0')
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
-      await buttonToken.connect(userA).mint(mintAmt)
+      await buttonToken.connect(userA).deposit(cAmount)
 
-      await expect(buttonToken.connect(userA).burn(burnAmt)).to.be.reverted
-    })
-  })
-
-  describe('When burn amount < unit amount', async function () {
-    it('should be reverted', async function () {
-      await setupContracts()
-
-      cAmount = toFixedPtAmt('1')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
-      burnAmt = BigNumber.from('1')
-
-      await mockBTC.connect(deployer).mint(userAAddress, cAmount)
-      await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
-      await buttonToken.connect(userA).mint(mintAmt)
-
-      await expect(buttonToken.connect(userA).burn(burnAmt)).to.be.reverted
-    })
-  })
-
-  describe('When burn amount small amount', async function () {
-    it('should be reverted', async function () {
-      await setupContracts()
-
-      cAmount = BigNumber.from('2')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
-      burnAmt = mintAmt
-
-      await mockBTC.connect(deployer).mint(userAAddress, cAmount)
-      await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
-      await buttonToken.connect(userA).mint(mintAmt)
-
-      await expect(buttonToken.connect(userA).burn(burnAmt)).not.to.be.reverted
-    })
-  })
-
-  describe('When burn amount > balance', async function () {
-    it('should be reverted', async function () {
-      await setupContracts()
-
-      cAmount = toFixedPtAmt('1')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
-      burnAmt = mintAmt
-
-      await mockBTC.connect(deployer).mint(userAAddress, cAmount)
-      await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
-      await buttonToken.connect(userA).mint(mintAmt)
-
-      await expect(buttonToken.connect(userA).burn(mintAmt.add(1))).to.be
+      await expect(buttonToken.connect(userA).withdraw(withdrawCAmount)).to.be
         .reverted
     })
   })
 
-  describe('When burn amount equal to the balance', async function () {
+  describe('When withdraw amount < unit amount', async function () {
+    it('should be reverted', async function () {
+      await setupContracts()
+
+      cAmount = toFixedPtAmt('2')
+      withdrawCAmount = BigNumber.from('1')
+
+      await mockBTC.connect(deployer).mint(userAAddress, cAmount)
+      await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
+      await buttonToken.connect(userA).deposit(cAmount)
+
+      await mockOracle.setData('123', true)
+      await expect(buttonToken.connect(userA).withdraw(withdrawCAmount)).to.be
+        .reverted
+    })
+  })
+
+  describe('When withdraw amount is unit amount', async function () {
+    it('should not be reverted', async function () {
+      await setupContracts()
+
+      cAmount = BigNumber.from('2')
+      withdrawCAmount = BigNumber.from('1')
+
+      await mockBTC.connect(deployer).mint(userAAddress, cAmount)
+      await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
+      await buttonToken.connect(userA).deposit(cAmount)
+
+      await expect(buttonToken.connect(userA).withdraw(withdrawCAmount)).not.to
+        .be.reverted
+    })
+  })
+
+  describe('When withdraw amount > balance', async function () {
+    it('should be reverted', async function () {
+      await setupContracts()
+
+      cAmount = toFixedPtAmt('1')
+
+      await mockBTC.connect(deployer).mint(userAAddress, cAmount)
+      await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
+      await buttonToken.connect(userA).deposit(cAmount)
+
+      await expect(buttonToken.connect(userA).deposit(cAmount.add(1))).to.be
+        .reverted
+    })
+  })
+
+  describe('When withdraw amount equal to the balance', async function () {
     beforeEach(async function () {
       await setupContracts()
 
       cAmount = toFixedPtAmt('1')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
-      burnAmt = mintAmt
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-      depositedCAmount = await buttonToken
-        .connect(userA)
-        .callStatic.mint(mintAmt)
-      await buttonToken.connect(userA).mint(mintAmt)
+      await buttonToken.connect(userA).callStatic.deposit(cAmount)
+      await buttonToken.connect(userA).deposit(cAmount)
     })
 
-    it('should transfer collateral to the user', async function () {
-      expect(await mockBTC.balanceOf(userAAddress)).to.eq(
-        cAmount.sub(depositedCAmount),
-      )
-      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(
-        depositedCAmount,
-      )
+    it('should transfer underlying to the user', async function () {
+      expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
 
-      const withdrawCAmount = await buttonToken
-        .connect(userA)
-        .callStatic.burn(burnAmt)
-      await expect(buttonToken.connect(userA).burn(burnAmt))
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+      expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
+
+      await expect(buttonToken.connect(userA).withdraw(cAmount))
         .to.emit(mockBTC, 'Transfer')
-        .withArgs(buttonToken.address, userAAddress, withdrawCAmount)
+        .withArgs(buttonToken.address, userAAddress, cAmount)
 
       expect(await mockBTC.balanceOf(userAAddress)).to.eq(cAmount)
       expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
+
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+      expect(await buttonToken.totalUnderlying()).to.eq('0')
     })
 
-    it('should mint button tokens', async function () {
+    it('should deposit button tokens', async function () {
       expect(await buttonToken.balanceOf(userAAddress)).to.eq(
         toFixedPtAmt('10000'),
       )
 
-      await buttonToken.connect(userA).burn(burnAmt)
+      expect(
+        await buttonToken.connect(userA).callStatic.withdraw(cAmount),
+      ).to.eq(toFixedPtAmt('10000'))
+
+      await buttonToken.connect(userA).withdraw(cAmount)
 
       expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
     })
 
     it('should emit transfer log', async function () {
-      await expect(buttonToken.connect(userA).burn(burnAmt))
+      await expect(buttonToken.connect(userA).withdraw(cAmount))
         .to.emit(buttonToken, 'Transfer')
         .withArgs(
           userAAddress,
@@ -368,38 +367,27 @@ describe('ButtonToken:burn', async () => {
     })
   })
 
-  describe('When burn amount less than the balance', async function () {
-    let cBurnAmount: BigNumber
-
+  describe('When withdraw amount less than the balance', async function () {
     beforeEach(async function () {
       await setupContracts()
 
       cAmount = toFixedPtAmt('2')
-      cBurnAmount = toFixedPtAmt('1')
-      mintAmt = await buttonToken.exchangeRate(cAmount)
-      burnAmt = await buttonToken.exchangeRate(cBurnAmount)
+      withdrawCAmount = toFixedPtAmt('1')
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)
       await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-      depositedCAmount = await buttonToken
-        .connect(userA)
-        .callStatic.mint(mintAmt)
-      await buttonToken.connect(userA).mint(mintAmt)
+      await buttonToken.connect(userA).deposit(cAmount)
     })
 
-    it('should transfer collateral to the user', async function () {
-      expect(await mockBTC.balanceOf(userAAddress)).to.eq(
-        cAmount.sub(depositedCAmount),
-      )
-      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(
-        depositedCAmount,
-      )
+    it('should transfer underlying to the user', async function () {
+      expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+      expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
 
-      const withdrawCAmount = await buttonToken
-        .connect(userA)
-        .callStatic.burn(burnAmt)
-      await expect(buttonToken.connect(userA).burn(burnAmt))
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+      expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
+
+      await expect(buttonToken.connect(userA).withdraw(withdrawCAmount))
         .to.emit(mockBTC, 'Transfer')
         .withArgs(buttonToken.address, userAAddress, withdrawCAmount)
 
@@ -407,14 +395,24 @@ describe('ButtonToken:burn', async () => {
       expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(
         toFixedPtAmt('1'),
       )
+
+      expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(
+        cAmount.sub(withdrawCAmount),
+      )
+      expect(await buttonToken.totalUnderlying()).to.eq(
+        cAmount.sub(withdrawCAmount),
+      )
     })
 
-    it('should mint button tokens', async function () {
+    it('should deposit button tokens', async function () {
       expect(await buttonToken.balanceOf(userAAddress)).to.eq(
         toFixedPtAmt('20000'),
       )
 
-      await buttonToken.connect(userA).burn(burnAmt)
+      expect(
+        await buttonToken.connect(userA).callStatic.withdraw(withdrawCAmount),
+      ).to.eq(toFixedPtAmt('10000'))
+      await buttonToken.connect(userA).withdraw(withdrawCAmount)
 
       expect(await buttonToken.balanceOf(userAAddress)).to.eq(
         toFixedPtAmt('10000'),
@@ -422,7 +420,7 @@ describe('ButtonToken:burn', async () => {
     })
 
     it('should emit transfer log', async function () {
-      await expect(buttonToken.connect(userA).burn(burnAmt))
+      await expect(buttonToken.connect(userA).withdraw(withdrawCAmount))
         .to.emit(buttonToken, 'Transfer')
         .withArgs(
           userAAddress,
@@ -433,50 +431,51 @@ describe('ButtonToken:burn', async () => {
   })
 })
 
-describe('ButtonToken:burnAll', async () => {
+describe('ButtonToken:withdrawAll', async () => {
   beforeEach(async function () {
     await setupContracts()
 
     cAmount = toFixedPtAmt('1')
-    mintAmt = await buttonToken.exchangeRate(cAmount)
-    burnAmt = mintAmt
 
     await mockBTC.connect(deployer).mint(userAAddress, cAmount)
     await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
 
-    depositedCAmount = await buttonToken.connect(userA).callStatic.mint(mintAmt)
-    await buttonToken.connect(userA).mint(mintAmt)
+    await buttonToken.connect(userA).deposit(cAmount)
   })
 
-  it('should transfer collateral to the user', async function () {
-    expect(await mockBTC.balanceOf(userAAddress)).to.eq(
-      cAmount.sub(depositedCAmount),
-    )
-    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(depositedCAmount)
+  it('should transfer underlying to the user', async function () {
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
 
-    const withdrawCAmount = await buttonToken
-      .connect(userA)
-      .callStatic.burnAll()
-    await expect(buttonToken.connect(userA).burnAll())
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+    expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
+
+    await expect(buttonToken.connect(userA).withdrawAll())
       .to.emit(mockBTC, 'Transfer')
-      .withArgs(buttonToken.address, userAAddress, withdrawCAmount)
+      .withArgs(buttonToken.address, userAAddress, cAmount)
 
     expect(await mockBTC.balanceOf(userAAddress)).to.eq(cAmount)
     expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+    expect(await buttonToken.totalUnderlying()).to.eq('0')
   })
 
-  it('should mint button tokens', async function () {
+  it('should deposit button tokens', async function () {
     expect(await buttonToken.balanceOf(userAAddress)).to.eq(
       toFixedPtAmt('10000'),
     )
 
-    await buttonToken.connect(userA).burnAll()
+    expect(await buttonToken.connect(userA).callStatic.withdrawAll()).to.eq(
+      toFixedPtAmt('10000'),
+    )
+    await buttonToken.connect(userA).withdrawAll()
 
     expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
   })
 
   it('should emit transfer log', async function () {
-    await expect(buttonToken.connect(userA).burnAll())
+    await expect(buttonToken.connect(userA).withdrawAll())
       .to.emit(buttonToken, 'Transfer')
       .withArgs(
         userAAddress,

@@ -5,15 +5,14 @@
   During every iteration; inflation is sampled from a uniform distribution between [-50%,250%]
   and the button tokens total supply grows/contracts.
 
-  In each cycle we test the following guarantees:
-  - If the current quoted `exchangeRate` between button tokens to collateral is x:y,
-    * user should be able to deposit "at the most" y collateral tokens and
-      mint "precisely" x button tokens.
-    * user should be able to withdraw "at the most" y collateral tokens and
-      burn "precisely" x button tokens.
+  In each cycle we test the following:
   - If address 'A' transfers x button tokens to address 'B'.
-    A's resulting external balance will be decreased by precisely x button tokens,
-    and B's external balance will be precisely increased by x button tokens.
+    A's resulting external balance will be decreased by "precisely" x button tokens,
+    and B's external balance will be "precisely" increased by x button tokens.
+  - If address 'A' deposits y underlying tokens tokens,
+    A's resulting underlying balance will increase by "precisely" y.
+  - If address 'A' withdraws y underlying tokens tokens,
+    A's resulting underlying balance will decrease by "precisely" y.
 */
 
 import { ethers, upgrades } from 'hardhat'
@@ -23,7 +22,7 @@ import { imul } from '../utils/utils'
 const Stochasm = require('stochasm')
 
 const PRICE_DECIMALS = 8
-const MAX_COLLATERAL = ethers.BigNumber.from(10).pow(27).sub(1)
+const MAX_UNDERLYING = ethers.BigNumber.from(10).pow(27).sub(1)
 const endPrice = ethers.BigNumber.from(2).pow(96).sub(1)
 const priceGrowth = new Stochasm({
   min: -0.5,
@@ -39,61 +38,48 @@ let buttonToken: Contract,
   user: Signer
 
 async function testMintBurn(cAmount: BigNumberish) {
-  expect(await mockBTC.balanceOf(deployer.getAddress())).to.eq(MAX_COLLATERAL)
+  expect(await mockBTC.balanceOf(deployer.getAddress())).to.eq(MAX_UNDERLYING)
   expect(await buttonToken.balanceOf(deployer.getAddress())).to.eq('0')
   expect(await buttonToken.scaledBalanceOf(deployer.getAddress())).to.eq('0')
   expect(await buttonToken.totalSupply()).to.eq('0')
   expect(await buttonToken.scaledTotalSupply()).to.eq('0')
 
-  const quotedAmt = await buttonToken.exchangeRate(cAmount)
-  if (quotedAmt.lte('0')) {
-    return
-  }
-
   console.log('Price', (await buttonToken.currentPrice()).toString())
-  console.log('Queried CAmount', cAmount.toString())
-  console.log('Quoted amount', quotedAmt.toString())
+  console.log('CAmount', cAmount.toString())
 
-  // mint collateral
+  // deposit underlying
   await mockBTC.connect(deployer).approve(buttonToken.address, cAmount)
-  const depositedCAmount = await buttonToken
-    .connect(deployer)
-    .callStatic.mint(quotedAmt)
-  await buttonToken.connect(deployer).mint(quotedAmt)
 
-  console.log('Used CAmount', depositedCAmount.toString())
-  console.log('CAmount diff', depositedCAmount.sub(cAmount).abs().toString())
+  const b1 = await mockBTC.balanceOf(deployer.getAddress())
+  await buttonToken.connect(deployer).deposit(cAmount)
+  const b2 = await mockBTC.balanceOf(deployer.getAddress())
+  const depositedCAmount = b1.sub(b2)
 
-  // Exactly depositedCAmount gets transferred to the button token contract
-  expect(depositedCAmount).to.lte(cAmount)
+  // Exactly cAmount gets transferred to the button token contract
+  expect(depositedCAmount).to.eq(cAmount)
   expect(await mockBTC.balanceOf(deployer.getAddress())).to.eq(
-    MAX_COLLATERAL.sub(depositedCAmount),
+    MAX_UNDERLYING.sub(depositedCAmount),
   )
   expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(depositedCAmount)
 
-  // minter collateral balance increase exactly by depositedCAmount
+  // minter underlying balance increase exactly by depositedCAmount
   expect(await buttonToken.scaledBalanceOf(deployer.getAddress())).to.eq(
     depositedCAmount,
   )
   expect(await buttonToken.scaledTotalSupply()).to.eq(depositedCAmount)
 
-  // minter balance increase exactly by quotedAmt
-  expect(await buttonToken.balanceOf(deployer.getAddress())).to.eq(quotedAmt)
-  expect(await buttonToken.totalSupply()).to.eq(quotedAmt)
+  // withdraw underlying
+  await buttonToken.connect(deployer).withdraw(cAmount)
+  const b3 = await mockBTC.balanceOf(deployer.getAddress())
+  const withdrawnCAmount = b3.sub(b2)
 
-  // burn collateral
-  const burnCAmount = await buttonToken
-    .connect(deployer)
-    .callStatic.burn(quotedAmt)
-  await buttonToken.connect(deployer).burn(quotedAmt)
-
-  // Exactly burnCAmount gets transferred out of the button token contract
-  expect(burnCAmount).to.eq(depositedCAmount)
-  expect(burnCAmount).to.lte(cAmount)
-  expect(await mockBTC.balanceOf(deployer.getAddress())).to.eq(MAX_COLLATERAL)
+  // Exactly withdrawnCAmount gets transferred out of the button token contract
+  expect(withdrawnCAmount).to.eq(depositedCAmount)
+  expect(withdrawnCAmount).to.lte(cAmount)
+  expect(await mockBTC.balanceOf(deployer.getAddress())).to.eq(MAX_UNDERLYING)
   expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
 
-  // burner collateral balance decreases exactly by burnCAmount
+  // burner underlying balance decreases exactly by withdrawnCAmount
   expect(await buttonToken.scaledBalanceOf(deployer.getAddress())).to.eq('0')
   expect(await buttonToken.scaledTotalSupply()).to.eq('0')
 
@@ -101,9 +87,9 @@ async function testMintBurn(cAmount: BigNumberish) {
   expect(await buttonToken.balanceOf(deployer.getAddress())).to.eq('0')
   expect(await buttonToken.totalSupply()).to.eq('0')
 
-  // burn shares if they are left over
+  // burn bits if they are left over
   try {
-    await buttonToken.connect(deployer).burnAll()
+    await buttonToken.connect(deployer).withdrawAll()
   } catch (e) {}
 }
 
@@ -155,7 +141,7 @@ async function exec() {
 
   await mockBTC
     .connect(deployer)
-    .mint(await deployer.getAddress(), MAX_COLLATERAL)
+    .mint(await deployer.getAddress(), MAX_UNDERLYING)
 
   let i = 0
   let currentPrice = await buttonToken.currentPrice()
@@ -164,63 +150,67 @@ async function exec() {
       (await buttonToken.currentPrice()).add(priceChange),
       true,
     )
-    currentPrice = await buttonToken.currentPrice()
     await buttonToken.connect(deployer).rebase()
+    currentPrice = await buttonToken.currentPrice()
+    if (currentPrice.gte(endPrice)) {
+      break
+    }
     i++
 
     console.log('Rebase iteration', i)
     console.log('New price', currentPrice.toString(), 'price')
 
-    const minCollateral = BigNumber.from('10')
-      .pow(PRICE_DECIMALS)
-      .div(currentPrice)
+    // recalculate if bounds change
+    const PRICE_BITS = BigNumber.from(
+      '11579208923731619542357098500868790785326998466564000000000',
+    )
+    const BITS_PER_UNDERLYING = BigNumber.from(
+      '115792089237316195423570985008687907853269984665640',
+    )
+    const minCollateral = PRICE_BITS.div(BITS_PER_UNDERLYING.mul(currentPrice))
       .mul(2)
+      .add(1)
     console.log(
-      `Testing precision of ${minCollateral.toString()} mint and burn`,
+      `Testing precision of ${minCollateral.toString()} deposit and withdraw`,
     )
     await testMintBurn(minCollateral)
 
     console.log(
-      `Testing precision of ${MAX_COLLATERAL.div(23).toString()} mint and burn`,
+      `Testing precision of ${MAX_UNDERLYING.div(
+        23,
+      ).toString()} deposit and withdraw`,
     )
-    await testMintBurn(MAX_COLLATERAL.div(23))
+    await testMintBurn(MAX_UNDERLYING.div(23))
 
     console.log(
-      `Testing precision of ${MAX_COLLATERAL.toString()} mint and burn`,
+      `Testing precision of ${MAX_UNDERLYING.toString()} deposit and withdraw`,
     )
-    await testMintBurn(MAX_COLLATERAL)
+    await testMintBurn(MAX_UNDERLYING)
 
-    const quotedAmt = await buttonToken.exchangeRate(MAX_COLLATERAL)
-    await mockBTC.connect(deployer).approve(buttonToken.address, MAX_COLLATERAL)
-    const depositedCAmount = await buttonToken
+    await mockBTC.connect(deployer).approve(buttonToken.address, MAX_UNDERLYING)
+    const mintAmount = await buttonToken
       .connect(deployer)
-      .callStatic.mint(quotedAmt)
-    await buttonToken.connect(deployer).mint(quotedAmt)
-
-    console.log('Queried CAmount', MAX_COLLATERAL.toString())
-    console.log('Used CAmount', depositedCAmount.toString())
-    console.log(
-      'CAmount diff',
-      depositedCAmount.sub(MAX_COLLATERAL).abs().toString(),
-    )
-    console.log('Quoted amount', quotedAmt.toString())
+      .callStatic.deposit(MAX_UNDERLYING)
+    await buttonToken.connect(deployer).deposit(MAX_UNDERLYING)
 
     console.log('Testing precision of 1 unit transfer')
     await testTransfer(deployer, user, '1')
     await testTransfer(user, deployer, '1')
 
-    console.log(`Testing precision of ${quotedAmt.div(23).toString()} transfer`)
-    await testTransfer(deployer, user, quotedAmt.div(23))
-    await testTransfer(user, deployer, quotedAmt.div(23))
+    console.log(
+      `Testing precision of ${mintAmount.div(23).toString()} transfer`,
+    )
+    await testTransfer(deployer, user, mintAmount.div(23))
+    await testTransfer(user, deployer, mintAmount.div(23))
 
     console.log('Testing precision of max transfer')
-    await testTransfer(deployer, user, quotedAmt)
-    await testTransfer(user, deployer, quotedAmt)
+    await testTransfer(deployer, user, mintAmount)
+    await testTransfer(user, deployer, mintAmount)
 
     try {
-      await buttonToken.connect(user).burnAll()
+      await buttonToken.connect(user).withdrawAll()
     } catch (e) {}
-    await buttonToken.connect(deployer).burnAll()
+    await buttonToken.connect(deployer).withdrawAll()
 
     inflation = priceGrowth.next().toFixed(5)
     priceChange = imul(currentPrice, inflation, 1)

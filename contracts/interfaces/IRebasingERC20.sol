@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 // Interface definition for Rebasing ERC20 tokens which have a "elastic" external
 // balance and "fixed" internal balance. Each user's external balance is

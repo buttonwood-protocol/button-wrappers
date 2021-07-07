@@ -92,7 +92,7 @@ describe('ButtonToken:deposit', async () => {
       cAmount = (await buttonToken.MAX_UNDERLYING()).add(1)
 
       const mintAmt = cAmount
-        .mul(await buttonToken.currentPrice())
+        .mul(await buttonToken.lastPrice())
         .div(BigNumber.from(10).pow(PRICE_DECIMALS))
 
       await mockBTC.connect(deployer).mint(userAAddress, cAmount)

@@ -98,11 +98,11 @@ describe('ButtonToken:Initialization', () => {
   })
 
   it('should set the oracle price and reference', async function () {
-    expect(await buttonToken.priceOracle()).to.eq(mockOracle.address)
+    expect(await buttonToken.oracle()).to.eq(mockOracle.address)
   })
 })
 
-describe('ButtonToken:resetPriceOracle', async () => {
+describe('ButtonToken:updateOracle', async () => {
   beforeEach('setup ButtonToken contract', setupContracts)
 
   describe('when invoked by non owner', function () {
@@ -112,7 +112,7 @@ describe('ButtonToken:resetPriceOracle', async () => {
       await mockOracle.setData(toOracleValue('45000'), true)
 
       await expect(
-        buttonToken.connect(userA).resetPriceOracle(mockOracle.address),
+        buttonToken.connect(userA).updateOracle(mockOracle.address),
       ).to.be.revertedWith('Ownable: caller is not the owner')
     })
   })
@@ -124,7 +124,7 @@ describe('ButtonToken:resetPriceOracle', async () => {
       await mockOracle.setData(toOracleValue('45000'), false)
 
       await expect(
-        buttonToken.connect(deployer).resetPriceOracle(mockOracle.address),
+        buttonToken.connect(deployer).updateOracle(mockOracle.address),
       ).to.be.revertedWith('ButtonToken: unable to fetch data from oracle')
     })
   })
@@ -135,18 +135,18 @@ describe('ButtonToken:resetPriceOracle', async () => {
       mockOracle = await oracleFactory.connect(deployer).deploy()
       await mockOracle.setData(toOracleValue('45000'), true)
 
-      expect(await buttonToken.priceOracle()).to.not.eq(mockOracle.address)
+      expect(await buttonToken.oracle()).to.not.eq(mockOracle.address)
 
       await expect(
-        buttonToken.connect(deployer).resetPriceOracle(mockOracle.address),
+        buttonToken.connect(deployer).updateOracle(mockOracle.address),
       )
         .to.emit(buttonToken, 'Rebase')
         .withArgs('2', toOracleValue('45000'))
-        .to.emit(buttonToken, 'PriceOracleUpdated')
+        .to.emit(buttonToken, 'OracleUpdated')
         .withArgs(mockOracle.address)
 
-      expect(await buttonToken.priceOracle()).to.eq(mockOracle.address)
-      expect(await buttonToken.currentPrice()).to.eq(toOracleValue('45000'))
+      expect(await buttonToken.oracle()).to.eq(mockOracle.address)
+      expect(await buttonToken.lastPrice()).to.eq(toOracleValue('45000'))
     })
   })
 })
@@ -224,7 +224,7 @@ describe('ButtonToken:Rebase:Expansion', async function () {
 
       await mockOracle.setData(MAX_PRICE.sub(1), true)
       await buttonToken.rebase()
-      expect(await buttonToken.currentPrice()).to.eq(MAX_PRICE.sub(1))
+      expect(await buttonToken.lastPrice()).to.eq(MAX_PRICE.sub(1))
 
       await mockOracle.setData(MAX_PRICE.add(1), true)
       r = buttonToken.connect(deployer).rebase()
@@ -236,7 +236,7 @@ describe('ButtonToken:Rebase:Expansion', async function () {
     })
 
     it('should increase the price to MAX_PRICE', async function () {
-      expect(await buttonToken.currentPrice()).to.eq(MAX_PRICE)
+      expect(await buttonToken.lastPrice()).to.eq(MAX_PRICE)
     })
 
     it('should increase the supply to MAX_SUPPLY', async function () {
@@ -265,7 +265,7 @@ describe('ButtonToken:Rebase:Expansion', async function () {
     })
 
     it('should not change the price', async function () {
-      expect(await buttonToken.currentPrice()).to.eq(MAX_PRICE)
+      expect(await buttonToken.lastPrice()).to.eq(MAX_PRICE)
     })
 
     it('should not change the totalSupply', async function () {

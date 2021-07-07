@@ -105,8 +105,8 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     //--------------------------------------------------------------------------
     // ButtonWrapper attributes
 
-    // The reference to the underlying token.
-    address private immutable _underlying;
+    /// @inheritdoc IButtonWrapper
+    address public immutable override underlying;
 
     //--------------------------------------------------------------------------
     // Rebasing ERC-20 identity attributes
@@ -156,7 +156,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         // MAX_PRICE and MAX_UNDERLYING need to be recalculated.
         require(IERC20Metadata(underlying_).decimals() <= 18, "ButtonToken: unsupported precision");
 
-        _underlying = underlying_;
+        underlying = underlying_;
         _name = name_;
         _symbol = symbol_;
 
@@ -204,7 +204,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
 
     /// @inheritdoc IERC20Metadata
     function decimals() external view override returns (uint8) {
-        return IERC20Metadata(_underlying).decimals();
+        return IERC20Metadata(underlying).decimals();
     }
 
     //--------------------------------------------------------------------------
@@ -247,11 +247,6 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
 
     //--------------------------------------------------------------------------
     // ButtonWrapper view methods
-
-    /// @inheritdoc IButtonWrapper
-    function underlying() external view override returns (address) {
-        return _underlying;
-    }
 
     /// @inheritdoc IButtonWrapper
     function balanceOfUnderlying(address who) external view override returns (uint256) {
@@ -368,7 +363,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
 
         require(amount > 0, "ButtonToken: too few button tokens to mint");
 
-        IERC20(_underlying).safeTransferFrom(_msgSender(), address(this), uAmount);
+        IERC20(underlying).safeTransferFrom(_msgSender(), address(this), uAmount);
         _transfer(address(0), _msgSender(), bits, amount);
         return amount;
     }
@@ -381,7 +376,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         require(amount > 0, "ButtonToken: too few button tokens to burn");
 
         _transfer(_msgSender(), address(0), bits, amount);
-        IERC20(_underlying).safeTransfer(_msgSender(), uAmount);
+        IERC20(underlying).safeTransfer(_msgSender(), uAmount);
         return amount;
     }
 
@@ -395,7 +390,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         require(uAmount > 0, "ButtonToken: too few button tokens to burn");
 
         _transfer(_msgSender(), address(0), bits, amount);
-        IERC20(_underlying).safeTransfer(_msgSender(), uAmount);
+        IERC20(underlying).safeTransfer(_msgSender(), uAmount);
         return amount;
     }
 

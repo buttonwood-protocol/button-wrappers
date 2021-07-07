@@ -72,7 +72,7 @@ async function setupToken() {
   await mockBTC.connect(owner).mint(await owner.getAddress(), INITIAL_SUPPLY)
 
   await mockBTC.connect(owner).approve(token.address, INITIAL_SUPPLY)
-  await token.connect(owner).mint(INITIAL_SUPPLY)
+  await token.connect(owner).deposit(INITIAL_SUPPLY)
 
   return { token, owner, recipient, anotherAccount }
 }

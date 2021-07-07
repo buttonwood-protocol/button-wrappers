@@ -5,12 +5,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 import {IOracle} from "./interfaces/IOracle.sol";
-import {IRebasingERC20} from "./interfaces/IRebasingERC20.sol";
-import {IButtonWrapper} from "./interfaces/IButtonWrapper.sol";
+import "./interfaces/IButtonToken.sol";
 
 /**
  * @title The ButtonToken ERC20 wrapper.
@@ -51,7 +47,7 @@ import {IButtonWrapper} from "./interfaces/IButtonWrapper.sol";
  *
  *
  */
-contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
+contract ButtonToken is IButtonToken, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // We make the following guarantees:
     // - If address 'A' transfers x button tokens to address 'B'.
@@ -66,66 +62,59 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     using SafeERC20 for IERC20;
 
     //--------------------------------------------------------------------------
-    // Token Constants
-    // The price has a 8 decimal point precision.
+    // Constants
+
+    /// @dev The price has a 8 decimal point precision.
     uint256 public constant PRICE_DECIMALS = 8;
 
-    // Math constants
+    /// @dev Math constants.
     uint256 private constant MAX_UINT256 = type(uint256).max;
 
-    // The maximum units of the underlying token that can be deposited into this contract
-    // ie) for a underlying token with 18 decimals, MAX_UNDERLYING is 1B tokens.
+    /// @dev The maximum units of the underlying token that can be deposited into this contract
+    ///      ie) for a underlying token with 18 decimals, MAX_UNDERLYING is 1B tokens.
     uint256 public constant MAX_UNDERLYING = 1_000_000_000e18;
 
-    // TOTAL_BITS is a multiple of MAX_UNDERLYING so that {BITS_PER_UNDERLYING} is an integer.
-    // Use the highest value that fits in a uint256 for max granularity.
+    /// @dev TOTAL_BITS is a multiple of MAX_UNDERLYING so that {BITS_PER_UNDERLYING} is an integer.
+    ///      Use the highest value that fits in a uint256 for max granularity.
     uint256 private constant TOTAL_BITS = MAX_UINT256 - (MAX_UINT256 % MAX_UNDERLYING);
 
-    // Number of BITS per unit of deposit
+    /// @dev Number of BITS per unit of deposit.
     uint256 private constant BITS_PER_UNDERLYING = TOTAL_BITS / MAX_UNDERLYING;
 
-    // Number of BITS per unit of deposit * (1 USD)
+    /// @dev Number of BITS per unit of deposit * (1 USD).
     uint256 private constant PRICE_BITS = BITS_PER_UNDERLYING * (10**PRICE_DECIMALS);
 
     // TODO: recalculate this.
-    // TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_BITS + 1) - 1) / 2
-    // Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE
+    /// @dev TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_BITS + 1) - 1) / 2
+    ///      Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE.
     uint256 public constant MAX_PRICE = (2**96 - 1); // (2^96) - 1
 
     //--------------------------------------------------------------------------
-    // ButtonToken attributes
-
-    // The reference to the price oracle which feeds in the
-    // price of the underlying token.
-    address public priceOracle;
-
-    // Most recent price recorded from the price oracle.
-    uint256 public currentPrice;
-
-    //--------------------------------------------------------------------------
-    // ButtonWrapper attributes
+    // Attributes
 
     /// @inheritdoc IButtonWrapper
     address public immutable override underlying;
 
-    //--------------------------------------------------------------------------
-    // Rebasing ERC-20 identity attributes
+    /// @inheritdoc IButtonToken
+    address public override oracle;
+
+    /// @inheritdoc IButtonToken
+    uint256 public override lastPrice;
+
+    /// @dev Rebase counter
     uint256 _epoch;
 
-    //--------------------------------------------------------------------------
-    // ERC-20 identity attributes
-    string private _name;
-    string private _symbol;
+    /// @inheritdoc IERC20Metadata
+    string public override name;
 
-    // internal balance, bits issued per account
+    /// @inheritdoc IERC20Metadata
+    string public override symbol;
+
+    /// @dev internal balance, bits issued per account
     mapping(address => uint256) private _accountBits;
 
-    // ERC20 allowances
+    /// @dev ERC20 allowances
     mapping(address => mapping(address => uint256)) private _allowances;
-
-    //--------------------------------------------------------------------------
-    // Events
-    event PriceOracleUpdated(address priceOracle);
 
     //--------------------------------------------------------------------------
     // Modifiers
@@ -146,19 +135,24 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     }
 
     //--------------------------------------------------------------------------
+
+    /// @param underlying_ The underlying ERC20 token address.
+    /// @param name_ The ERC20 name.
+    /// @param symbol_ The ERC20 symbol.
+    /// @param oracle_ The oracle which provides the underlying token price.
     constructor(
         address underlying_,
         string memory name_,
         string memory symbol_,
-        address priceOracle_
+        address oracle_
     ) {
         // NOTE: If the underlying ERC20 has more than 18 decimals,
         // MAX_PRICE and MAX_UNDERLYING need to be recalculated.
         require(IERC20Metadata(underlying_).decimals() <= 18, "ButtonToken: unsupported precision");
 
         underlying = underlying_;
-        _name = name_;
-        _symbol = symbol_;
+        name = name_;
+        symbol = symbol_;
 
         // MAX_UNDERLYING worth bits are 'pre-mined' to `address(0x)`
         // at the time of construction.
@@ -169,38 +163,27 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         // No more than MAX_UNDERLYING can be deposited into the ButtonToken contract.
         _accountBits[address(0)] = TOTAL_BITS;
 
-        resetPriceOracle(priceOracle_);
+        updateOracle(oracle_);
     }
 
     //--------------------------------------------------------------------------
-    // ADMIN actions
+    // Owner only actions
 
-    /// @dev Update reference to the price oracle contract and resets price.
-    /// @param priceOracle_ The address of the new price oracle.
-    function resetPriceOracle(address priceOracle_) public onlyOwner {
+    /// @inheritdoc IButtonToken
+    function updateOracle(address oracle_) public override onlyOwner {
         uint256 price;
         bool valid;
-        (price, valid) = IOracle(priceOracle_).getData();
+        (price, valid) = IOracle(oracle_).getData();
         require(valid, "ButtonToken: unable to fetch data from oracle");
 
-        priceOracle = priceOracle_;
-        emit PriceOracleUpdated(priceOracle);
+        oracle = oracle_;
+        emit OracleUpdated(oracle);
 
         _rebase(price);
     }
 
     //--------------------------------------------------------------------------
     // ERC20 description attributes
-
-    /// @inheritdoc IERC20Metadata
-    function name() external view override returns (string memory) {
-        return _name;
-    }
-
-    /// @inheritdoc IERC20Metadata
-    function symbol() external view override returns (string memory) {
-        return _symbol;
-    }
 
     /// @inheritdoc IERC20Metadata
     function decimals() external view override returns (uint8) {
@@ -272,7 +255,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         onAfterRebase
         returns (bool)
     {
-        _transfer(_msgSender(), to, _amountToBits(amount, currentPrice), amount);
+        _transfer(_msgSender(), to, _amountToBits(amount, lastPrice), amount);
         return true;
     }
 
@@ -285,7 +268,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         returns (bool)
     {
         uint256 bits = _accountBits[_msgSender()];
-        _transfer(_msgSender(), to, bits, _bitsToAmount(bits, currentPrice));
+        _transfer(_msgSender(), to, bits, _bitsToAmount(bits, lastPrice));
         return true;
     }
 
@@ -296,7 +279,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         uint256 amount
     ) external override validRecipient(to) onAfterRebase returns (bool) {
         _allowances[from][_msgSender()] = _allowances[from][_msgSender()].sub(amount);
-        _transfer(from, to, _amountToBits(amount, currentPrice), amount);
+        _transfer(from, to, _amountToBits(amount, lastPrice), amount);
         return true;
     }
 
@@ -309,7 +292,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         returns (bool)
     {
         uint256 bits = _accountBits[from];
-        uint256 amount = _bitsToAmount(bits, currentPrice);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
         _allowances[from][_msgSender()] = _allowances[from][_msgSender()].sub(amount);
         _transfer(from, to, bits, amount);
         return true;
@@ -359,7 +342,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     /// @inheritdoc IButtonWrapper
     function deposit(uint256 uAmount) external override onAfterRebase returns (uint256) {
         uint256 bits = _uAmountToBits(uAmount);
-        uint256 amount = _bitsToAmount(bits, currentPrice);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
 
         require(amount > 0, "ButtonToken: too few button tokens to mint");
 
@@ -371,7 +354,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     /// @inheritdoc IButtonWrapper
     function withdraw(uint256 uAmount) external override onAfterRebase returns (uint256) {
         uint256 bits = _uAmountToBits(uAmount);
-        uint256 amount = _bitsToAmount(bits, currentPrice);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
 
         require(amount > 0, "ButtonToken: too few button tokens to burn");
 
@@ -384,7 +367,7 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     function withdrawAll() external override onAfterRebase returns (uint256) {
         uint256 bits = _accountBits[_msgSender()];
         uint256 uAmount = _bitsToUAmount(bits);
-        uint256 amount = _bitsToAmount(bits, currentPrice);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
 
         // Allows msg.sender to clear dust out
         require(uAmount > 0, "ButtonToken: too few button tokens to burn");
@@ -415,13 +398,13 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
         }
     }
 
-    /// @dev Updates the `currentPrice` and recomputes the internal scalar.
+    /// @dev Updates the `lastPrice` and recomputes the internal scalar.
     function _rebase(uint256 price) private {
         if (price > MAX_PRICE) {
             price = MAX_PRICE;
         }
 
-        currentPrice = price;
+        lastPrice = price;
 
         _epoch++;
 
@@ -434,14 +417,14 @@ contract ButtonToken is IButtonWrapper, IRebasingERC20, Ownable {
     }
 
     /// @dev Queries the oracle for the latest price
-    ///      If fetched oracle price isn't valid returns the current price,
-    ///      else returns the fetched oracle price oracle price.
+    ///      If fetched oracle price isn't valid returns the last price,
+    ///      else returns the new price from the oracle.
     function _queryPrice() private view returns (uint256, bool) {
-        uint256 price;
-        bool dataValid;
-        (price, dataValid) = IOracle(priceOracle).getData();
+        uint256 newPrice;
+        bool valid;
+        (newPrice, valid) = IOracle(oracle).getData();
 
-        return (dataValid ? price : currentPrice, dataValid);
+        return (valid ? newPrice : lastPrice, valid);
     }
 
     /// @dev Convert button token amount to bits.

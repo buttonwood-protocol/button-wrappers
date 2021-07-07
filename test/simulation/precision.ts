@@ -44,7 +44,7 @@ async function testMintBurn(cAmount: BigNumberish) {
   expect(await buttonToken.totalSupply()).to.eq('0')
   expect(await buttonToken.scaledTotalSupply()).to.eq('0')
 
-  console.log('Price', (await buttonToken.currentPrice()).toString())
+  console.log('Price', (await buttonToken.lastPrice()).toString())
   console.log('CAmount', cAmount.toString())
 
   // deposit underlying
@@ -144,21 +144,21 @@ async function exec() {
     .mint(await deployer.getAddress(), MAX_UNDERLYING)
 
   let i = 0
-  let currentPrice = await buttonToken.currentPrice()
+  let lastPrice = await buttonToken.lastPrice()
   do {
     await mockOracle.setData(
-      (await buttonToken.currentPrice()).add(priceChange),
+      (await buttonToken.lastPrice()).add(priceChange),
       true,
     )
     await buttonToken.connect(deployer).rebase()
-    currentPrice = await buttonToken.currentPrice()
-    if (currentPrice.gte(endPrice)) {
+    lastPrice = await buttonToken.lastPrice()
+    if (lastPrice.gte(endPrice)) {
       break
     }
     i++
 
     console.log('Rebase iteration', i)
-    console.log('New price', currentPrice.toString(), 'price')
+    console.log('New price', lastPrice.toString(), 'price')
 
     // recalculate if bounds change
     const PRICE_BITS = BigNumber.from(
@@ -167,7 +167,7 @@ async function exec() {
     const BITS_PER_UNDERLYING = BigNumber.from(
       '115792089237316195423570985008687907853269984665640',
     )
-    const minCollateral = PRICE_BITS.div(BITS_PER_UNDERLYING.mul(currentPrice))
+    const minCollateral = PRICE_BITS.div(BITS_PER_UNDERLYING.mul(lastPrice))
       .mul(2)
       .add(1)
     console.log(
@@ -213,8 +213,8 @@ async function exec() {
     await buttonToken.connect(deployer).withdrawAll()
 
     inflation = priceGrowth.next().toFixed(5)
-    priceChange = imul(currentPrice, inflation, 1)
-  } while (currentPrice.add(priceChange).lt(endPrice))
+    priceChange = imul(lastPrice, inflation, 1)
+  } while (lastPrice.add(priceChange).lt(endPrice))
 }
 
 describe('Precision tests', function () {

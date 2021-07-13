@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "hardhat/console.sol";
 
 contract UnbuttonToken is ERC20 {
     using SafeMath for uint256;
@@ -25,6 +26,9 @@ contract UnbuttonToken is ERC20 {
 
     function deposit(uint256 cAmount) external returns (uint256) {
         if (totalSupply() == 0) {
+            console.log("sender", IERC20(asset).balanceOf(msg.sender));
+            console.log("cAmount", cAmount);
+            console.log("min-deposit", MINIMUM_DEPOSIT);
             IERC20(asset).safeTransferFrom(msg.sender, address(this), MINIMUM_DEPOSIT);
 
             _mint(address(0), _fromCAmount(MINIMUM_DEPOSIT));

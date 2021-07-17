@@ -1,75 +1,159 @@
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IUnbuttonToken.sol";
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract UnbuttonToken is ERC20 {
+/**
+ * @title The UnbuttonToken ERC20 wrapper.
+ *
+ * @dev The UnbuttonToken wraps elastic balance (rebasing) tokens like
+ *      AMPL, Chai and AAVE's aTokens, to create a fixed balance representation.
+ *
+ *      User's unbutton balances are represented as their "share" of the total deposit pool.
+ *
+ */
+contract UnbuttonToken is IUnbuttonToken, ERC20 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public immutable asset;
+    //--------------------------------------------------------------------------
+    // Constants
 
-    uint256 public constant MINIMUM_DEPOSIT = 1_000;
+    /// @dev Initial conversion between underlying tokens to unbutton tokens.
     uint256 public constant INITIAL_RATE = 1_000_000;
 
+    /// @dev Small deposit which is locked to the contract to ensure that
+    ///      the `totalUnderlying` balance is always non-zero.
+    uint256 public constant MINIMUM_DEPOSIT = 1_000;
+
+    // TODO: recauclate this
+    /// @dev The maximum units of the underlying token that can be
+    ///      safely deposited into this contract without any numeric overflow.
+    /// MAX_UNDERLYING = sqrt(MAX_UINT256/INITIAL_RATE)
+    uint256 public constant MAX_UNDERLYING = type(uint128).max / 1_000;
+
+    //--------------------------------------------------------------------------
+    // Attributes
+
+    /// @inheritdoc IButtonWrapper
+    address public immutable override underlying;
+
+    //--------------------------------------------------------------------------
+
+    /// @param underlying_ The underlying ERC20 token address.
+    /// @param name_ The ERC20 name.
+    /// @param symbol_ The ERC20 symbol.
     constructor(
-        string memory name,
-        string memory symbol,
-        address asset_
-    ) ERC20(name, symbol) {
-        asset = asset_;
+        address underlying_,
+        string memory name_,
+        string memory symbol_
+    ) ERC20(name_, symbol_) {
+        underlying = underlying_;
     }
 
-    function deposit(uint256 cAmount) external returns (uint256) {
+    //--------------------------------------------------------------------------
+    // ButtonWrapper write methods
+
+    /// @inheritdoc IButtonWrapper
+    function deposit(uint256 uAmount) external override returns (uint256) {
+        uint256 totalUnderlying_ = _queryUnderlyingBalance();
+        require(
+            uAmount.add(totalUnderlying_) < MAX_UNDERLYING,
+            "UnbuttonToken: too many unbutton tokens to mint"
+        );
+
         if (totalSupply() == 0) {
-            _mint(address(this), _fromCAmount(MINIMUM_DEPOSIT));
+            IERC20(underlying).safeTransferFrom(msg.sender, address(this), MINIMUM_DEPOSIT);
 
-            IERC20(asset).safeTransferFrom(msg.sender, address(this), MINIMUM_DEPOSIT);
+            _mint(address(this), _fromUnderlyingAmount(MINIMUM_DEPOSIT, totalUnderlying_));
 
-            cAmount = cAmount.sub(MINIMUM_DEPOSIT);
+            totalUnderlying_ = _queryUnderlyingBalance();
+
+            uAmount = uAmount.sub(MINIMUM_DEPOSIT);
         }
 
-        uint256 amount = _fromCAmount(cAmount);
+        uint256 mintAmount = _fromUnderlyingAmount(uAmount, totalUnderlying_);
 
-        require(cAmount > 0 && amount > 0, "UnbuttonToken: too few collateral tokens to deposit");
+        require(mintAmount > 0, "UnbuttonToken: too few unbutton tokens to mint");
 
-        IERC20(asset).safeTransferFrom(msg.sender, address(this), cAmount);
+        IERC20(underlying).safeTransferFrom(msg.sender, address(this), uAmount);
 
-        _mint(msg.sender, amount);
+        _mint(msg.sender, mintAmount);
 
-        return amount;
+        return mintAmount;
     }
 
-    function withdraw(uint256 amount) external returns (uint256) {
-        uint256 cAmount = _toCAmount(amount);
+    /// @inheritdoc IButtonWrapper
+    function withdraw(uint256 uAmount) external override returns (uint256) {
+        uint256 burnAmount = _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance());
 
-        require(cAmount > 0 && amount > 0, "UnbuttonToken: too few collateral tokens to withdraw");
+        require(burnAmount > 0, "UnbuttonToken: too few unbutton tokens to burn");
 
-        _burn(msg.sender, amount);
-        IERC20(asset).safeTransfer(msg.sender, cAmount);
+        _burn(msg.sender, burnAmount);
 
-        return cAmount;
+        IERC20(underlying).safeTransfer(msg.sender, uAmount);
+
+        return burnAmount;
     }
 
-    function totalDeposits() public view returns (uint256) {
-        return IERC20(asset).balanceOf(address(this));
+    /// @inheritdoc IButtonWrapper
+    function withdrawAll() external override returns (uint256) {
+        uint256 totalUnderlying_ = _queryUnderlyingBalance();
+        uint256 uAmount = _toUnderlyingAmount(balanceOf(msg.sender), totalUnderlying_);
+        uint256 burnAmount = _fromUnderlyingAmount(uAmount, totalUnderlying_);
+
+        require(burnAmount > 0, "UnbuttonToken: too few unbutton tokens to burn");
+
+        _burn(msg.sender, burnAmount);
+
+        IERC20(underlying).safeTransfer(msg.sender, uAmount);
+
+        return burnAmount;
     }
 
-    function balanceOfUnderlying(address owner) public view returns (uint256) {
-        return _toCAmount(balanceOf(owner));
+    //--------------------------------------------------------------------------
+    // ButtonWrapper view methods
+
+    /// @inheritdoc IButtonWrapper
+    function totalUnderlying() external view override returns (uint256) {
+        return _queryUnderlyingBalance();
     }
 
-    function _fromCAmount(uint256 cAmount) private view returns (uint256) {
+    /// @inheritdoc IButtonWrapper
+    function balanceOfUnderlying(address owner) external view override returns (uint256) {
+        return _toUnderlyingAmount(balanceOf(owner), _queryUnderlyingBalance());
+    }
+
+    //--------------------------------------------------------------------------
+    // Private methods
+
+    /// @dev Converts underlying to unbutton token amount.
+    function _fromUnderlyingAmount(uint256 uAmount, uint256 totalUnderlying_)
+        private
+        view
+        returns (uint256)
+    {
         return
-            (totalDeposits() > 0)
-                ? cAmount.mul(totalSupply()).div(totalDeposits())
-                : cAmount.mul(INITIAL_RATE);
+            (totalUnderlying_ > 0)
+                ? uAmount.mul(totalSupply()).div(totalUnderlying_)
+                : uAmount.mul(INITIAL_RATE);
     }
 
-    function _toCAmount(uint256 amount) private view returns (uint256) {
-        return (totalSupply() > 0) ? amount.mul(totalDeposits()).div(totalSupply()) : 0;
+    /// @dev Converts unbutton to underlying token amount.
+    function _toUnderlyingAmount(uint256 amount, uint256 totalUnderlying_)
+        private
+        view
+        returns (uint256)
+    {
+        uint256 totalSupply = totalSupply();
+        return (totalSupply > 0) ? amount.mul(totalUnderlying_).div(totalSupply) : 0;
+    }
+
+    /// @dev Queries the underlying ERC-20 balance of this contract.
+    function _queryUnderlyingBalance() private view returns (uint256) {
+        return IERC20(underlying).balanceOf(address(this));
     }
 }

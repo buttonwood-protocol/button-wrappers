@@ -267,9 +267,20 @@ describe('Button:Elastic:transferAllFrom', () => {
       await token
         .connect(owner)
         .approve(await anotherAccount.getAddress(), senderBalance.add('99'))
-      await token
-        .connect(anotherAccount)
-        .transferAllFrom(await owner.getAddress(), await recipient.getAddress())
+      await expect(
+        token
+          .connect(anotherAccount)
+          .transferAllFrom(
+            await owner.getAddress(),
+            await recipient.getAddress(),
+          ),
+      )
+        .to.emit(token, 'Approval')
+        .withArgs(
+          await owner.getAddress(),
+          await anotherAccount.getAddress(),
+          '99',
+        )
       expect(
         await token.allowance(
           await owner.getAddress(),

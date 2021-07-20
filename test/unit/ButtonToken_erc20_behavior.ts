@@ -233,7 +233,7 @@ describe('ButtonToken:ERC20:transferFrom', () => {
           .approve(await anotherAccount.getAddress(), transferAmount)
       })
 
-      it('emits a transfer event', async function () {
+      it('emits a transfer and approval event', async function () {
         await expect(
           token
             .connect(anotherAccount)
@@ -248,6 +248,12 @@ describe('ButtonToken:ERC20:transferFrom', () => {
             await owner.getAddress(),
             await recipient.getAddress(),
             transferAmount,
+          )
+          .to.emit(token, 'Approval')
+          .withArgs(
+            await owner.getAddress(),
+            await anotherAccount.getAddress(),
+            '0',
           )
       })
 

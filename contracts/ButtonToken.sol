@@ -318,7 +318,7 @@ contract ButtonToken is IButtonToken, Ownable {
     // @inheritdoc IERC20
     function decreaseAllowance(address spender, uint256 subtractedAmount) external returns (bool) {
         if (subtractedAmount >= _allowances[_msgSender()][spender]) {
-            _allowances[_msgSender()][spender] = 0;
+            delete _allowances[_msgSender()][spender];
         } else {
             _allowances[_msgSender()][spender] -= subtractedAmount;
         }

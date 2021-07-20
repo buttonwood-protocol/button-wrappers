@@ -3,7 +3,6 @@ pragma solidity 0.8.4;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import {IOracle} from "./interfaces/IOracle.sol";
 import "./interfaces/IButtonToken.sol";
@@ -58,7 +57,6 @@ contract ButtonToken is IButtonToken, Ownable {
     // - If address 'A' withdraws y underlying tokens,
     //   A's resulting underlying balance will decrease by "precisely" y.
     //
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     //--------------------------------------------------------------------------
@@ -146,9 +144,7 @@ contract ButtonToken is IButtonToken, Ownable {
         string memory symbol_,
         address oracle_
     ) {
-        // NOTE: If the underlying ERC20 has more than 18 decimals,
-        // MAX_PRICE and MAX_UNDERLYING need to be recalculated.
-        require(IERC20Metadata(underlying_).decimals() <= 18, "ButtonToken: unsupported precision");
+        require(underlying_ != address(0), "ButtonToken: invalid underlying reference");
 
         underlying = underlying_;
         name = name_;
@@ -278,7 +274,9 @@ contract ButtonToken is IButtonToken, Ownable {
         address to,
         uint256 amount
     ) external override validRecipient(to) onAfterRebase returns (bool) {
-        _allowances[from][_msgSender()] = _allowances[from][_msgSender()].sub(amount);
+        _allowances[from][_msgSender()] -= amount;
+        emit Approval(from, _msgSender(), _allowances[from][_msgSender()]);
+
         _transfer(from, to, _amountToBits(amount, lastPrice), amount);
         return true;
     }
@@ -293,7 +291,10 @@ contract ButtonToken is IButtonToken, Ownable {
     {
         uint256 bits = _accountBits[from];
         uint256 amount = _bitsToAmount(bits, lastPrice);
-        _allowances[from][_msgSender()] = _allowances[from][_msgSender()].sub(amount);
+
+        _allowances[from][_msgSender()] -= amount;
+        emit Approval(from, _msgSender(), _allowances[from][_msgSender()]);
+
         _transfer(from, to, bits, amount);
         return true;
     }
@@ -308,7 +309,7 @@ contract ButtonToken is IButtonToken, Ownable {
 
     // @inheritdoc IERC20
     function increaseAllowance(address spender, uint256 addedAmount) external returns (bool) {
-        _allowances[_msgSender()][spender] = _allowances[_msgSender()][spender].add(addedAmount);
+        _allowances[_msgSender()][spender] += addedAmount;
 
         emit Approval(_msgSender(), spender, _allowances[_msgSender()][spender]);
         return true;
@@ -317,11 +318,9 @@ contract ButtonToken is IButtonToken, Ownable {
     // @inheritdoc IERC20
     function decreaseAllowance(address spender, uint256 subtractedAmount) external returns (bool) {
         if (subtractedAmount >= _allowances[_msgSender()][spender]) {
-            _allowances[_msgSender()][spender] = 0;
+            delete _allowances[_msgSender()][spender];
         } else {
-            _allowances[_msgSender()][spender] = _allowances[_msgSender()][spender].sub(
-                subtractedAmount
-            );
+            _allowances[_msgSender()][spender] -= subtractedAmount;
         }
 
         emit Approval(_msgSender(), spender, _allowances[_msgSender()][spender]);
@@ -388,8 +387,8 @@ contract ButtonToken is IButtonToken, Ownable {
         uint256 bits,
         uint256 amount
     ) private {
-        _accountBits[from] = _accountBits[from].sub(bits);
-        _accountBits[to] = _accountBits[to].add(bits);
+        _accountBits[from] -= bits;
+        _accountBits[to] += bits;
 
         emit Transfer(from, to, amount);
 
@@ -412,8 +411,8 @@ contract ButtonToken is IButtonToken, Ownable {
     }
 
     /// @dev Returns the active "un-mined" bits
-    function _activeBits() public view returns (uint256) {
-        return TOTAL_BITS.sub(_accountBits[address(0)]);
+    function _activeBits() private view returns (uint256) {
+        return TOTAL_BITS - _accountBits[address(0)];
     }
 
     /// @dev Queries the oracle for the latest price
@@ -429,26 +428,26 @@ contract ButtonToken is IButtonToken, Ownable {
 
     /// @dev Convert button token amount to bits.
     function _amountToBits(uint256 amount, uint256 price) private pure returns (uint256) {
-        return amount.mul(_bitsPerToken(price));
+        return amount * _bitsPerToken(price);
     }
 
     /// @dev Convert underlying token amount to bits.
     function _uAmountToBits(uint256 uAmount) private pure returns (uint256) {
-        return uAmount.mul(BITS_PER_UNDERLYING);
+        return uAmount * BITS_PER_UNDERLYING;
     }
 
     /// @dev Convert bits to button token amount.
     function _bitsToAmount(uint256 bits, uint256 price) private pure returns (uint256) {
-        return bits.div(_bitsPerToken(price));
+        return bits / _bitsPerToken(price);
     }
 
     /// @dev Convert bits to underlying token amount.
     function _bitsToUAmount(uint256 bits) private pure returns (uint256) {
-        return bits.div(BITS_PER_UNDERLYING);
+        return bits / BITS_PER_UNDERLYING;
     }
 
     /// @dev Internal scalar to convert bits to button tokens.
     function _bitsPerToken(uint256 price) private pure returns (uint256) {
-        return PRICE_BITS.div(price);
+        return PRICE_BITS / price;
     }
 }

@@ -144,6 +144,8 @@ contract ButtonToken is IButtonToken, Ownable {
         string memory symbol_,
         address oracle_
     ) {
+        require(underlying_ != address(0), "ButtonToken: invalid underlying reference");
+
         underlying = underlying_;
         name = name_;
         symbol = symbol_;

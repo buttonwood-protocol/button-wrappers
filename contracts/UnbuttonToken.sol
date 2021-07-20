@@ -3,7 +3,6 @@ pragma solidity 0.8.4;
 import "./interfaces/IUnbuttonToken.sol";
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
@@ -16,7 +15,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  *
  */
 contract UnbuttonToken is IUnbuttonToken, ERC20 {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     //--------------------------------------------------------------------------
@@ -61,7 +59,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20 {
     function deposit(uint256 uAmount) external override returns (uint256) {
         uint256 totalUnderlying_ = _queryUnderlyingBalance();
         require(
-            uAmount.add(totalUnderlying_) < MAX_UNDERLYING,
+            (uAmount + totalUnderlying_) < MAX_UNDERLYING,
             "UnbuttonToken: too many unbutton tokens to mint"
         );
 
@@ -72,7 +70,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20 {
 
             totalUnderlying_ = _queryUnderlyingBalance();
 
-            uAmount = uAmount.sub(MINIMUM_DEPOSIT);
+            uAmount -= MINIMUM_DEPOSIT;
         }
 
         uint256 mintAmount = _fromUnderlyingAmount(uAmount, totalUnderlying_);
@@ -138,8 +136,8 @@ contract UnbuttonToken is IUnbuttonToken, ERC20 {
     {
         return
             (totalUnderlying_ > 0)
-                ? uAmount.mul(totalSupply()).div(totalUnderlying_)
-                : uAmount.mul(INITIAL_RATE);
+                ? (uAmount * totalSupply()) / totalUnderlying_
+                : uAmount * INITIAL_RATE;
     }
 
     /// @dev Converts unbutton to underlying token amount.
@@ -149,7 +147,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20 {
         returns (uint256)
     {
         uint256 totalSupply = totalSupply();
-        return (totalSupply > 0) ? amount.mul(totalUnderlying_).div(totalSupply) : 0;
+        return (totalSupply > 0) ? (amount * totalUnderlying_) / totalSupply : 0;
     }
 
     /// @dev Queries the underlying ERC-20 balance of this contract.

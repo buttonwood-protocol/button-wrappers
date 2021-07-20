@@ -408,7 +408,7 @@ contract ButtonToken is IButtonToken, Ownable {
     }
 
     /// @dev Returns the active "un-mined" bits
-    function _activeBits() public view returns (uint256) {
+    function _activeBits() private view returns (uint256) {
         return TOTAL_BITS - _accountBits[address(0)];
     }
 

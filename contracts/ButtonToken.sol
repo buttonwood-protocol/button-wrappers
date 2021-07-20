@@ -144,10 +144,6 @@ contract ButtonToken is IButtonToken, Ownable {
         string memory symbol_,
         address oracle_
     ) {
-        // NOTE: If the underlying ERC20 has more than 18 decimals,
-        // MAX_PRICE and MAX_UNDERLYING need to be recalculated.
-        require(IERC20Metadata(underlying_).decimals() <= 18, "ButtonToken: unsupported precision");
-
         underlying = underlying_;
         name = name_;
         symbol = symbol_;

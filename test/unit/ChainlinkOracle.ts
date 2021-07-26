@@ -18,7 +18,7 @@ async function mockedOracle() {
     .deploy()
   const oracle = await (await ethers.getContractFactory('ChainlinkOracle'))
     .connect(deployer)
-    .deploy(mockAggregator.address)
+    .deploy(mockAggregator.address, 60000)
 
   const oracleFetcher = await (
     await ethers.getContractFactory('MockOracleDataFetcher')
@@ -58,6 +58,11 @@ describe('ChainlinkOracle', function () {
 
       await expect(mockAggregator.connect(user).setLatestAnswer(data)).to.not.be
         .reverted
+      await expect(
+        mockAggregator
+          .connect(user)
+          .setUpdatedAt(Math.floor(new Date().valueOf() / 1000)),
+      ).to.not.be.reverted
 
       // we use an oracle fetcher contract because, since the IOracle
       // interface getData function is writable, we can't fetch the response directly
@@ -67,6 +72,25 @@ describe('ChainlinkOracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(true)
+    })
+
+    it('should fail with stale data', async function () {
+      const data = ethers.BigNumber.from('18923491321')
+
+      await expect(mockAggregator.connect(user).setLatestAnswer(data)).to.not.be
+        .reverted
+      await expect(
+        mockAggregator
+          .connect(user)
+          .setUpdatedAt(Math.floor(new Date().valueOf() / 1000) - 100000),
+      ).to.not.be.reverted
+
+      await oracleFetcher.connect(user).fetch()
+
+      const [res, success] = await oracleFetcher.getData()
+
+      expect(res.toString()).to.eq(data.toString())
+      expect(success).to.eq(false)
     })
   })
 })

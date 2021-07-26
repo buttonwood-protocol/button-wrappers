@@ -10,12 +10,24 @@ import "../interfaces/IChainlinkAggregator.sol";
  */
 contract MockChainlinkAggregator is IChainlinkAggregator {
     uint256 public answer;
+    uint256 public updatedAt;
 
     /**
      * Get the latest answer from the oracle
      */
-    function latestAnswer() external view override returns (uint256) {
-        return answer;
+    function latestRoundData()
+        external
+        view
+        override
+        returns (
+            uint80 roundId,
+            int256 _answer,
+            uint256 startedAt,
+            uint256 _updatedAt,
+            uint80 answeredInRound
+        )
+    {
+        return (0, int256(answer), 0, updatedAt, 0);
     }
 
     /**
@@ -23,5 +35,12 @@ contract MockChainlinkAggregator is IChainlinkAggregator {
      */
     function setLatestAnswer(uint256 _answer) public {
         answer = _answer;
+    }
+
+    /**
+     * Set the latest answer to be returned from now on
+     */
+    function setUpdatedAt(uint256 _updatedAt) public {
+        updatedAt = _updatedAt;
     }
 }

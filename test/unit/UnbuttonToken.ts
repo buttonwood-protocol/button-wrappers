@@ -51,9 +51,8 @@ async function setupContracts() {
     .deploy('Ampleforth', 'AMPL', startingMultiplier, multiplierGranularity)
 
   const unbuttonTokenFactory = await ethers.getContractFactory('UnbuttonToken')
-  unbuttonToken = await unbuttonTokenFactory
-    .connect(deployer)
-    .deploy(mockAmpl.address, NAME, SYMBOL)
+  unbuttonToken = await unbuttonTokenFactory.connect(deployer).deploy()
+  unbuttonToken.init(mockAmpl.address, NAME, SYMBOL)
 }
 
 describe('UnbuttonToken', () => {
@@ -325,6 +324,11 @@ describe('UnbuttonToken WithdrawalAll', () => {
     await unbuttonToken.connect(deployer).deposit('3000')
     r = unbuttonToken.connect(deployer).withdrawAll()
     await r
+  })
+
+  it('should fail to withdraw if balance is 0', async function () {
+    expect(await unbuttonToken.balanceOf(userBAddress)).to.eq('0')
+    await expect(unbuttonToken.connect(userB).withdrawAll()).to.be.reverted
   })
 
   it('should withdraw correct amount of corresponding collateral', async function () {

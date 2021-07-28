@@ -11,10 +11,12 @@ import {IChainlinkAggregator} from "../interfaces/IChainlinkAggregator.sol";
  */
 contract ChainlinkOracle is IOracle {
     // The address of the Chainlink Aggregator contract
-    IChainlinkAggregator public oracle;
+    IChainlinkAggregator public immutable oracle;
+    uint256 public immutable stalenessThresholdSecs;
 
-    constructor(address _oracle) {
+    constructor(address _oracle, uint256 _stalenessThresholdSecs) {
         oracle = IChainlinkAggregator(_oracle);
+        stalenessThresholdSecs = _stalenessThresholdSecs;
     }
 
     /**
@@ -23,7 +25,8 @@ contract ChainlinkOracle is IOracle {
      *         valid: Boolean indicating an value was fetched successfully.
      */
     function getData() external view override returns (uint256, bool) {
-        uint256 result = oracle.latestAnswer();
-        return (result, true);
+        (, int256 answer, , uint256 updatedAt, ) = oracle.latestRoundData();
+        uint256 diff = block.timestamp - updatedAt;
+        return (uint256(answer), diff <= stalenessThresholdSecs);
     }
 }

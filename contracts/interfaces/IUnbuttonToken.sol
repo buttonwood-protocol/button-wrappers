@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IButtonWrapper.sol";
 
 // Interface definition for the UnbuttonToken ERC20 wrapper contract
-interface IUnbuttonToken is IButtonWrapper, IERC20Upgradeable {
+interface IUnbuttonToken is IButtonWrapper, IERC20 {
     function init(
         address underlying_,
         string memory name_,

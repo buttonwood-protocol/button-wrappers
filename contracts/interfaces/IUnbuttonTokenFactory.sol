@@ -7,7 +7,7 @@ import "./IButtonWrapper.sol";
  * @dev Factory for UnbuttonToken contracts
  */
 interface IUnbuttonTokenFactory {
-    event UnbuttonTokenCreated(address newUnbuttonTokenAddress);
+    event UnbuttonTokenCreated(address newUnbuttonTokenAddress, address underlying);
 
     function createUnbuttonToken(
         address underlying,

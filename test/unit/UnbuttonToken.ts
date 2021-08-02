@@ -52,7 +52,7 @@ async function setupContracts() {
 
   const unbuttonTokenFactory = await ethers.getContractFactory('UnbuttonToken')
   unbuttonToken = await unbuttonTokenFactory.connect(deployer).deploy()
-  unbuttonToken.init(mockAmpl.address, NAME, SYMBOL)
+  unbuttonToken['init(address,string,string)'](mockAmpl.address, NAME, SYMBOL)
 }
 
 describe('UnbuttonToken', () => {

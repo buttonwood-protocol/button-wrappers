@@ -1,13 +1,9 @@
 pragma solidity 0.8.4;
 
 import "./interfaces/IUnbuttonToken.sol";
-
-import {
-    ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {
-    SafeERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./external/ERC20.sol";
 
 /**
  * @title The UnbuttonToken ERC20 wrapper.
@@ -18,8 +14,8 @@ import {
  *      User's unbutton balances are represented as their "share" of the total deposit pool.
  *
  */
-contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+contract UnbuttonToken is Initializable, IUnbuttonToken, ERC20 {
+    using SafeERC20 for IERC20;
 
     //--------------------------------------------------------------------------
     // Constants
@@ -45,6 +41,11 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
 
     //--------------------------------------------------------------------------
 
+    /**
+     * @dev Constructor for Unbutton ERC20 token
+     */
+    constructor() ERC20("IMPLEMENTATION", "IMPL") {}
+
     /// @param underlying_ The underlying ERC20 token address.
     /// @param name_ The ERC20 name.
     /// @param symbol_ The ERC20 symbol.
@@ -52,8 +53,8 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
         address underlying_,
         string memory name_,
         string memory symbol_
-    ) external override initializer {
-        super.__ERC20_init(name_, symbol_);
+    ) public override initializer {
+        super.init(name_, symbol_);
         underlying = underlying_;
     }
 
@@ -69,11 +70,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
         );
 
         if (totalSupply() == 0) {
-            IERC20Upgradeable(underlying).safeTransferFrom(
-                msg.sender,
-                address(this),
-                MINIMUM_DEPOSIT
-            );
+            IERC20(underlying).safeTransferFrom(msg.sender, address(this), MINIMUM_DEPOSIT);
 
             _mint(address(this), _fromUnderlyingAmount(MINIMUM_DEPOSIT, totalUnderlying_));
 
@@ -86,7 +83,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
 
         require(mintAmount > 0, "UnbuttonToken: too few unbutton tokens to mint");
 
-        IERC20Upgradeable(underlying).safeTransferFrom(msg.sender, address(this), uAmount);
+        IERC20(underlying).safeTransferFrom(msg.sender, address(this), uAmount);
 
         _mint(msg.sender, mintAmount);
 
@@ -101,7 +98,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
 
         _burn(msg.sender, burnAmount);
 
-        IERC20Upgradeable(underlying).safeTransfer(msg.sender, uAmount);
+        IERC20(underlying).safeTransfer(msg.sender, uAmount);
 
         return burnAmount;
     }
@@ -116,7 +113,7 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
 
         _burn(msg.sender, burnAmount);
 
-        IERC20Upgradeable(underlying).safeTransfer(msg.sender, uAmount);
+        IERC20(underlying).safeTransfer(msg.sender, uAmount);
 
         return burnAmount;
     }
@@ -161,6 +158,6 @@ contract UnbuttonToken is IUnbuttonToken, ERC20Upgradeable {
 
     /// @dev Queries the underlying ERC-20 balance of this contract.
     function _queryUnderlyingBalance() private view returns (uint256) {
-        return IERC20Upgradeable(underlying).balanceOf(address(this));
+        return IERC20(underlying).balanceOf(address(this));
     }
 }

@@ -28,7 +28,7 @@ contract UnbuttonTokenFactory is IUnbuttonTokenFactory, Context {
     ) external override returns (address) {
         address clone = Clones.clone(target);
         IUnbuttonToken(clone).init(underlying, name, symbol);
-        emit UnbuttonTokenCreated(clone);
+        emit UnbuttonTokenCreated(clone, underlying);
         return clone;
     }
 }

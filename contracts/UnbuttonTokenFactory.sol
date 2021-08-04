@@ -34,13 +34,19 @@ contract UnbuttonTokenFactory is IUnbuttonTokenFactory, Context {
         string memory name,
         string memory symbol
     ) external override returns (address) {
+        require(
+            !containsInstance(underlying, name, symbol),
+            "UnbuttonToken already exists for input parameters."
+        );
         address clone = Clones.clone(target);
         IUnbuttonToken(clone).init(underlying, name, symbol);
-        emit UnbuttonTokenCreated(clone, underlying);
 
         // Adding instance to registry
         parameterToInstance[(keccak256(abi.encode(underlying, name, symbol)))] = clone;
         instanceSet.add(clone);
+
+        // Emitting create event
+        emit UnbuttonTokenCreated(clone, underlying);
 
         return clone;
     }
@@ -49,7 +55,7 @@ contract UnbuttonTokenFactory is IUnbuttonTokenFactory, Context {
         address underlying,
         string memory name,
         string memory symbol
-    ) external view returns (bool contains) {
+    ) public view returns (bool contains) {
         return
             containsInstance(
                 parameterToInstance[(keccak256(abi.encode(underlying, name, symbol)))]

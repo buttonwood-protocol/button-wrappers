@@ -1,17 +1,6 @@
-import { ethers, upgrades, artifacts } from 'hardhat'
-import { Contract, Signer, BigNumber, BigNumberish } from 'ethers'
+import { ethers } from 'hardhat'
+import { Contract, Signer, BigNumber } from 'ethers'
 import { expect } from 'chai'
-
-const PRICE_DECIMALS = 8
-const DECIMALS = 18
-const NAME = 'Unbutton Ampleforth'
-const SYMBOL = 'UBTN-AMPL'
-
-const toFixedPtAmt = (a: string): BigNumber =>
-  ethers.utils.parseUnits(a, DECIMALS)
-
-const transferAmount = toFixedPtAmt('10')
-const unitTokenAmount = toFixedPtAmt('1')
 
 const startingMultiplier = 10000
 const multiplierGranularity = 10000
@@ -28,6 +17,33 @@ let accounts: Signer[],
   mockAmpl: Contract,
   unbuttonToken: Contract,
   unbuttonTokenFactory: Contract
+
+async function cloneUnbutton(
+  unbuttonTokenFactory: Contract,
+  targetAddress: String,
+  name: String,
+  symbol: String,
+) {
+  const transaction = await unbuttonTokenFactory.createUnbuttonToken(
+    targetAddress,
+    name,
+    symbol,
+  )
+  const receipt = await transaction.wait()
+  if (
+    receipt &&
+    receipt.events &&
+    receipt.events.length === 1 &&
+    receipt.events[0].args
+  ) {
+    return await ethers.getContractAt(
+      'UnbuttonToken',
+      receipt.events[0].args.newUnbuttonTokenAddress,
+    )
+  } else {
+    throw new Error('Unable to create new unbuttonToken clone')
+  }
+}
 
 async function setupContracts() {
   accounts = await ethers.getSigners()
@@ -78,6 +94,14 @@ describe('UnbuttonToken:Initialization', () => {
 
   it('should set the correct target reference', async function () {
     expect(await unbuttonTokenFactory.target()).to.eq(unbuttonToken.address)
+    expect(await unbuttonTokenFactory.instanceCount()).to.eq(0)
+    expect(
+      await unbuttonTokenFactory['containsInstance(address,string,string)'](
+        mockAmpl.address,
+        'UNBUTTON-Ampleforth',
+        'UNBUTTON-AMPL',
+      ),
+    ).to.eq(false)
   })
 })
 
@@ -85,33 +109,69 @@ describe('UnbuttonToken:createUnbuttonToken', () => {
   beforeEach('setup UnbuttonTokenFactory contract', setupContracts)
 
   it('Clone should have proper parameters set', async function () {
-    const transaction = await unbuttonTokenFactory.createUnbuttonToken(
+    let unbuttonTokenClone: Contract = await cloneUnbutton(
+      unbuttonTokenFactory,
       mockAmpl.address,
       'UNBUTTON-Ampleforth',
       'UNBUTTON-AMPL',
     )
-
-    const receipt = await transaction.wait()
-
-    let unbuttonTokenClone: Contract
-    if (
-      receipt &&
-      receipt.events &&
-      receipt.events.length === 1 &&
-      receipt.events[0].args
-    ) {
-      unbuttonTokenClone = await ethers.getContractAt(
-        'UnbuttonToken',
-        receipt.events[0].args.newUnbuttonTokenAddress,
-      )
-    } else {
-      throw new Error('Unable to create new unbuttonToken clone')
-    }
 
     expect(await unbuttonTokenClone.underlying()).to.eq(mockAmpl.address)
     expect(await unbuttonTokenClone.name()).to.eq('UNBUTTON-Ampleforth')
     expect(await unbuttonTokenClone.symbol()).to.eq('UNBUTTON-AMPL')
     expect(await unbuttonTokenClone.totalSupply()).to.eq('0')
     expect(await unbuttonTokenClone.totalUnderlying()).to.eq('0')
+  })
+
+  it('Instance should register into instanceSet', async function () {
+    let unbuttonTokenClone: Contract = await cloneUnbutton(
+      unbuttonTokenFactory,
+      mockAmpl.address,
+      'UNBUTTON-Ampleforth',
+      'UNBUTTON-AMPL',
+    )
+
+    expect(await unbuttonTokenFactory.instanceCount()).to.eq(1)
+    expect(await unbuttonTokenFactory.instanceAt(0)).to.eq(
+      unbuttonTokenClone.address,
+    )
+    expect(
+      await unbuttonTokenFactory['containsInstance(address)'](
+        unbuttonTokenClone.address,
+      ),
+    ).to.eq(true)
+    expect(
+      await unbuttonTokenFactory['containsInstance(address,string,string)'](
+        mockAmpl.address,
+        'UNBUTTON-Ampleforth',
+        'UNBUTTON-AMPL',
+      ),
+    ).to.eq(true)
+  })
+
+  it('Instance should fail to register same parameters into instanceSet twice', async function () {
+    let unbuttonTokenClone1: Contract = await cloneUnbutton(
+      unbuttonTokenFactory,
+      mockAmpl.address,
+      'UNBUTTON-Ampleforth',
+      'UNBUTTON-AMPL',
+    )
+
+    expect(
+      await unbuttonTokenFactory['containsInstance(address,string,string)'](
+        mockAmpl.address,
+        'UNBUTTON-Ampleforth',
+        'UNBUTTON-AMPL',
+      ),
+    ).to.eq(true)
+
+    await expect(
+      cloneUnbutton(
+        unbuttonTokenFactory,
+        mockAmpl.address,
+        'UNBUTTON-Ampleforth',
+        'UNBUTTON-AMPL',
+      ),
+    ).to.be.reverted
   })
 })

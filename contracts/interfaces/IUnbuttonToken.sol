@@ -5,5 +5,9 @@ import "./IButtonWrapper.sol";
 
 // Interface definition for the UnbuttonToken ERC20 wrapper contract
 interface IUnbuttonToken is IButtonWrapper, IERC20 {
-
+    function init(
+        address underlying_,
+        string memory name_,
+        string memory symbol_
+    ) external;
 }

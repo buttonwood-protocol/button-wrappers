@@ -1,9 +1,9 @@
 pragma solidity 0.8.4;
 
 import "./interfaces/IUnbuttonToken.sol";
-
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./external/ERC20.sol";
 
 /**
  * @title The UnbuttonToken ERC20 wrapper.
@@ -14,7 +14,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  *      User's unbutton balances are represented as their "share" of the total deposit pool.
  *
  */
-contract UnbuttonToken is IUnbuttonToken, ERC20 {
+contract UnbuttonToken is Initializable, IUnbuttonToken, ERC20 {
     using SafeERC20 for IERC20;
 
     //--------------------------------------------------------------------------
@@ -37,18 +37,24 @@ contract UnbuttonToken is IUnbuttonToken, ERC20 {
     // Attributes
 
     /// @inheritdoc IButtonWrapper
-    address public immutable override underlying;
+    address public override underlying;
 
     //--------------------------------------------------------------------------
+
+    /**
+     * @dev Constructor for Unbutton ERC20 token
+     */
+    constructor() ERC20("IMPLEMENTATION", "IMPL") {}
 
     /// @param underlying_ The underlying ERC20 token address.
     /// @param name_ The ERC20 name.
     /// @param symbol_ The ERC20 symbol.
-    constructor(
+    function init(
         address underlying_,
         string memory name_,
         string memory symbol_
-    ) ERC20(name_, symbol_) {
+    ) public override initializer {
+        super.init(name_, symbol_);
         underlying = underlying_;
     }
 

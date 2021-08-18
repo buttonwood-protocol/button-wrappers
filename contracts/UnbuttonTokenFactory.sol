@@ -1,76 +1,33 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
 import "./interfaces/IUnbuttonToken.sol";
-import "./interfaces/IUnbuttonTokenFactory.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "./interfaces/IFactory.sol";
+import {InstanceRegistry} from "./utilities/InstanceRegistry.sol";
 
 /**
  * @title The UnbuttonToken Factory
  *
- * @dev The UnbuttonTokenFactory creates clones of a target UnbuttonToken
+ * @dev Creates clones of the target  UnbuttonToken implementation
  *
  */
-contract UnbuttonTokenFactory is IUnbuttonTokenFactory, Context {
-    using EnumerableSet for EnumerableSet.AddressSet;
-    struct UnbuttonParameters {
+contract UnbuttonTokenFactory is InstanceRegistry, IFactory {
+    address public implementation;
+
+    constructor(address _implementation) {
+        implementation = _implementation;
+    }
+
+    function create(bytes calldata args) external override returns (address) {
         address underlying;
         string name;
         string symbol;
-    }
+        (underlying, name, symbol) = abi.decode(args, (address,string,string));
 
-    mapping(bytes32 => address) parameterToInstance;
-    EnumerableSet.AddressSet private instanceSet;
+        address unbuttonToken = Clones.clone(implementation);
+        IUnbuttonToken(unbuttonToken).init(underlying, name, symbol);
 
-    address public target;
-
-    constructor(address _target) {
-        target = _target;
-    }
-
-    function createUnbuttonToken(
-        address underlying,
-        string memory name,
-        string memory symbol
-    ) external override returns (address) {
-        require(
-            !containsInstance(underlying, name, symbol),
-            "UnbuttonToken already exists for input parameters."
-        );
-        address clone = Clones.clone(target);
-        IUnbuttonToken(clone).init(underlying, name, symbol);
-
-        // Adding instance to registry
-        parameterToInstance[(keccak256(abi.encode(underlying, name, symbol)))] = clone;
-        instanceSet.add(clone);
-
-        // Emitting create event
-        emit UnbuttonTokenCreated(clone, underlying);
-
-        return clone;
-    }
-
-    function containsInstance(
-        address underlying,
-        string memory name,
-        string memory symbol
-    ) public view returns (bool contains) {
-        return
-            containsInstance(
-                parameterToInstance[(keccak256(abi.encode(underlying, name, symbol)))]
-            );
-    }
-
-    function containsInstance(address instance) public view returns (bool contains) {
-        return instanceSet.contains(instance);
-    }
-
-    function instanceCount() external view returns (uint256 count) {
-        return instanceSet.length();
-    }
-
-    function instanceAt(uint256 index) external view returns (address instance) {
-        return instanceSet.at(index);
+        InstanceRegistry._register(address(unbuttonToken));
+        return address(unbuttonToken);
     }
 }

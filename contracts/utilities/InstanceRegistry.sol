@@ -2,7 +2,7 @@
 // Source https://github.com/ampleforth/token-geyser-v2/blob/main/contracts/Factory/InstanceRegistry.sol
 pragma solidity 0.8.4;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 interface IInstanceRegistry {
     /* events */
@@ -47,5 +47,10 @@ contract InstanceRegistry is IInstanceRegistry {
     function _register(address instance) internal {
         require(_instanceSet.add(instance), "InstanceRegistry: already registered");
         emit InstanceAdded(instance);
+    }
+
+    function _deregister(address instance) internal {
+        require(_instanceSet.remove(instance), "InstanceRegistry: already not registered");
+        emit InstanceRemoved(instance);
     }
 }

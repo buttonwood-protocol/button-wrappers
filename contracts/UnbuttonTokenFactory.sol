@@ -1,33 +1,51 @@
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./interfaces/IUnbuttonToken.sol";
-import "./interfaces/IFactory.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IFactory} from "./interfaces/IFactory.sol";
+import {IUnbuttonToken} from "./interfaces/IUnbuttonToken.sol";
+
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {InstanceRegistry} from "./utilities/InstanceRegistry.sol";
 
 /**
  * @title The UnbuttonToken Factory
  *
- * @dev Creates clones of the target  UnbuttonToken implementation
+ * @dev Creates clones of the target UnbuttonToken template
  *
  */
 contract UnbuttonTokenFactory is InstanceRegistry, IFactory {
-    address public implementation;
+    using SafeERC20 for IERC20;
 
-    constructor(address _implementation) {
-        implementation = _implementation;
+    address public immutable template;
+
+    constructor(address _template) {
+        template = _template;
     }
 
+    /// @dev Create and initialize an instance of the unbutton token
     function create(bytes calldata args) external override returns (address) {
+        // Parse params
         address underlying;
-        string name;
-        string symbol;
-        (underlying, name, symbol) = abi.decode(args, (address,string,string));
+        string memory name;
+        string memory symbol;
+        (underlying, name, symbol) = abi.decode(args, (address, string, string));
 
-        address unbuttonToken = Clones.clone(implementation);
-        IUnbuttonToken(unbuttonToken).init(underlying, name, symbol);
+        // Create instance
+        address unbuttonToken = Clones.clone(template);
 
+        // Approve transfer of initial deposit to instance
+        uint256 inititalDeposit = IUnbuttonToken(unbuttonToken).MINIMUM_DEPOSIT();
+        IERC20(underlying).safeTransferFrom(msg.sender, address(this), inititalDeposit);
+        IERC20(underlying).approve(unbuttonToken, inititalDeposit);
+
+        // Initialize instance
+        IUnbuttonToken(unbuttonToken).initialize(underlying, name, symbol);
+
+        // Register instance
         InstanceRegistry._register(address(unbuttonToken));
-        return address(unbuttonToken);
+
+        // Return instance
+        return unbuttonToken;
     }
 }

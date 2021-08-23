@@ -22,9 +22,10 @@
     "profile": "REPORT_GAS=true yarn hardhat test test/unit/*.ts",
     "coverage": "yarn hardhat coverage --testfiles 'test/unit/*.ts'",
     "format": "yarn prettier --config .prettierrc --write '**/*.ts' 'contracts/**/*.sol'",
-    "lint": "yarn format && yarn solhint 'contracts/**/*.sol'"
+    "lint": "yarn solhint 'contracts/**/*.sol'"
   },
   "pre-commit": [
+    "format",
     "lint"
   ],
   "devDependencies": {

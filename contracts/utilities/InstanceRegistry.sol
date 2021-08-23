@@ -50,7 +50,7 @@ contract InstanceRegistry is IInstanceRegistry {
     }
 
     function _deregister(address instance) internal {
-        require(_instanceSet.remove(instance), "InstanceRegistry: already not registered");
+        require(_instanceSet.remove(instance), "InstanceRegistry: not registered");
         emit InstanceRemoved(instance);
     }
 }

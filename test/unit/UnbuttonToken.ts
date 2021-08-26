@@ -52,7 +52,13 @@ async function setupContracts() {
 
   const unbuttonTokenFactory = await ethers.getContractFactory('UnbuttonToken')
   unbuttonToken = await unbuttonTokenFactory.connect(deployer).deploy()
-  unbuttonToken['init(address,string,string)'](mockAmpl.address, NAME, SYMBOL)
+
+  const initialDeposit = await unbuttonToken.MINIMUM_DEPOSIT()
+  await mockAmpl.mint(deployerAddress, initialDeposit)
+  await mockAmpl
+    .connect(deployer)
+    .approve(unbuttonToken.address, initialDeposit)
+  await unbuttonToken.initialize(mockAmpl.address, NAME, SYMBOL)
 }
 
 describe('UnbuttonToken', () => {
@@ -79,12 +85,18 @@ describe('UnbuttonToken:Initialization', () => {
   })
 
   it('should set the erc20 balance and supply', async function () {
-    expect(await unbuttonToken.totalSupply()).to.eq('0')
+    expect(await unbuttonToken.totalSupply()).to.eq('1000000000')
+    expect(await unbuttonToken.balanceOf(unbuttonToken.address)).to.eq(
+      '1000000000',
+    )
     expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('0')
   })
 
   it('should set the underlying balance and supply', async function () {
-    expect(await unbuttonToken.totalUnderlying()).to.eq('0')
+    expect(await unbuttonToken.totalUnderlying()).to.eq('1000')
+    expect(
+      await unbuttonToken.balanceOfUnderlying(unbuttonToken.address),
+    ).to.eq('1000')
     expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq('0')
   })
 })
@@ -93,21 +105,7 @@ describe('UnbuttonToken Invalid Deposit', () => {
   beforeEach('setup UnbuttonToken contract', setupContracts)
 
   it('should fail to deposit negative amount', async function () {
-    await mockAmpl.mint(deployerAddress, '1000')
-    await mockAmpl.connect(deployer).approve(unbuttonToken.address, '1000')
     await expect(unbuttonToken.connect(deployer).deposit('-1')).to.be.reverted
-  })
-
-  it('should fail to deposit below exactly min-deposit amount on first time', async function () {
-    await mockAmpl.mint(deployerAddress, '1000')
-    await mockAmpl.connect(deployer).approve(unbuttonToken.address, '1000')
-    await expect(unbuttonToken.connect(deployer).deposit('1000')).to.be.reverted
-  })
-
-  it('should fail to deposit below minimum deposit amount', async function () {
-    await mockAmpl.mint(deployerAddress, '1000')
-    await mockAmpl.connect(deployer).approve(unbuttonToken.address, '1000')
-    await expect(unbuttonToken.connect(deployer).deposit('999')).to.be.reverted
   })
 
   it('should fail to deposit more than balance', async function () {
@@ -123,11 +121,11 @@ describe('UnbuttonToken Invalid Deposit', () => {
   })
 
   it('should fail to deposit more than max_amount', async function () {
-    const maxUAmount = (await unbuttonToken.MAX_UNDERLYING()).sub(1)
-    await mockAmpl.mint(deployerAddress, maxUAmount)
-    await mockAmpl.connect(deployer).approve(unbuttonToken.address, maxUAmount)
-
-    await unbuttonToken.connect(deployer).deposit(maxUAmount)
+    const maxUAmount = (await unbuttonToken.MAX_UNDERLYING()).sub('1')
+    const mintAmount = maxUAmount.sub(await unbuttonToken.MINIMUM_DEPOSIT())
+    await mockAmpl.mint(deployerAddress, mintAmount)
+    await mockAmpl.connect(deployer).approve(unbuttonToken.address, mintAmount)
+    await unbuttonToken.connect(deployer).deposit(mintAmount)
     expect(await unbuttonToken.totalUnderlying()).eq(maxUAmount)
     await expect(
       unbuttonToken.connect(deployer).deposit('1'),
@@ -135,15 +133,15 @@ describe('UnbuttonToken Invalid Deposit', () => {
   })
 })
 
-describe('UnbuttonToken: Initial Deposit', () => {
+describe('UnbuttonToken: Deposit', () => {
   beforeEach('setup UnbuttonToken contract', setupContracts)
 
-  describe('when the user deposits the smallest allowed deposit', async function () {
+  describe('when the user deposits the smallest amount', async function () {
     let r: any
     beforeEach(async function () {
-      await mockAmpl.mint(deployerAddress, '1001')
-      await mockAmpl.connect(deployer).approve(unbuttonToken.address, '1001')
-      r = unbuttonToken.connect(deployer).deposit('1001')
+      await mockAmpl.mint(deployerAddress, '1')
+      await mockAmpl.connect(deployer).approve(unbuttonToken.address, '1')
+      r = unbuttonToken.connect(deployer).deposit('1')
       await r
     })
 
@@ -166,46 +164,13 @@ describe('UnbuttonToken: Initial Deposit', () => {
     it('should log transfer', async function () {
       await expect(r)
         .to.emit(mockAmpl, 'Transfer')
-        .withArgs(deployerAddress, unbuttonToken.address, '1000')
-
-      await expect(r)
-        .to.emit(mockAmpl, 'Transfer')
         .withArgs(deployerAddress, unbuttonToken.address, '1')
     })
 
     it('should log mint', async function () {
       await expect(r)
         .to.emit(unbuttonToken, 'Transfer')
-        .withArgs(
-          ethers.constants.AddressZero,
-          unbuttonToken.address,
-          '1000000000',
-        )
-
-      await expect(r)
-        .to.emit(unbuttonToken, 'Transfer')
         .withArgs(ethers.constants.AddressZero, deployerAddress, '1000000')
-    })
-  })
-
-  describe('when the 2nd user deposits min-deposit', async function () {
-    it('should see 2nd user able to deposit exactly min-deposit', async function () {
-      await mockAmpl.mint(deployerAddress, '2000')
-      await mockAmpl.connect(deployer).approve(unbuttonToken.address, '2000')
-      await unbuttonToken.connect(deployer).deposit('2000')
-
-      await mockAmpl.mint(userAAddress, '1000')
-      await mockAmpl.connect(userA).approve(unbuttonToken.address, '1000')
-      await unbuttonToken.connect(userA).deposit('1000')
-
-      expect(await unbuttonToken.totalSupply()).eq('3000000000')
-      expect(await unbuttonToken.balanceOf(deployerAddress)).eq('1000000000')
-      expect(await unbuttonToken.balanceOf(userAAddress)).eq('1000000000')
-      expect(await unbuttonToken.totalUnderlying()).eq('3000')
-      expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).eq(
-        '1000',
-      )
-      expect(await unbuttonToken.balanceOfUnderlying(userAAddress)).eq('1000')
     })
   })
 
@@ -221,31 +186,27 @@ describe('UnbuttonToken: Initial Deposit', () => {
     })
 
     it('should mint the first tokens to itself and rest to the user', async function () {
-      expect(await unbuttonToken.totalSupply()).to.eq('1000000000000000000')
+      expect(await unbuttonToken.totalSupply()).to.eq('1000000001000000000')
       expect(await unbuttonToken.balanceOf(unbuttonToken.address)).to.eq(
         '1000000000',
       )
       expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq(
-        '999999999000000000',
+        '1000000000000000000',
       )
 
-      expect(await unbuttonToken.totalUnderlying()).to.eq('1000000000000')
+      expect(await unbuttonToken.totalUnderlying()).to.eq('1000000001000')
       expect(
         await unbuttonToken.balanceOfUnderlying(unbuttonToken.address),
       ).to.eq('1000')
       expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
-        '999999999000',
+        '1000000000000',
       )
     })
 
     it('should log transfer', async function () {
       await expect(r)
         .to.emit(mockAmpl, 'Transfer')
-        .withArgs(deployerAddress, unbuttonToken.address, '1000')
-
-      await expect(r)
-        .to.emit(mockAmpl, 'Transfer')
-        .withArgs(deployerAddress, unbuttonToken.address, '999999999000')
+        .withArgs(deployerAddress, unbuttonToken.address, '1000000000000')
     })
 
     it('should log mint', async function () {
@@ -253,16 +214,8 @@ describe('UnbuttonToken: Initial Deposit', () => {
         .to.emit(unbuttonToken, 'Transfer')
         .withArgs(
           ethers.constants.AddressZero,
-          unbuttonToken.address,
-          '1000000000',
-        )
-
-      await expect(r)
-        .to.emit(unbuttonToken, 'Transfer')
-        .withArgs(
-          ethers.constants.AddressZero,
           deployerAddress,
-          '999999999000000000',
+          '1000000000000000000',
         )
     })
   })
@@ -293,11 +246,11 @@ describe('UnbuttonToken Withdrawal', () => {
       await r
     })
     it('should withdraw correct amount of corresponding collateral', async function () {
-      expect(await unbuttonToken.totalSupply()).to.eq('2500000000')
-      expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('1500000000')
-      expect(await unbuttonToken.totalUnderlying()).to.eq('2500')
+      expect(await unbuttonToken.totalSupply()).to.eq('3500000000')
+      expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('2500000000')
+      expect(await unbuttonToken.totalUnderlying()).to.eq('3500')
       expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
-        '1500',
+        '2500',
       )
       expect(await mockAmpl.balanceOf(deployerAddress)).to.eq('500')
     })
@@ -336,17 +289,17 @@ describe('UnbuttonToken WithdrawalAll', () => {
     expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('0')
     expect(await unbuttonToken.totalUnderlying()).to.eq('1000')
     expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq('0')
-    expect(await mockAmpl.balanceOf(deployerAddress)).to.eq('2000')
+    expect(await mockAmpl.balanceOf(deployerAddress)).to.eq('3000')
   })
   it('should log transfer', async function () {
     await expect(r)
       .to.emit(mockAmpl, 'Transfer')
-      .withArgs(unbuttonToken.address, deployerAddress, '2000')
+      .withArgs(unbuttonToken.address, deployerAddress, '3000')
   })
   it('should log mint', async function () {
     await expect(r)
       .to.emit(unbuttonToken, 'Transfer')
-      .withArgs(deployerAddress, ethers.constants.AddressZero, '2000000000')
+      .withArgs(deployerAddress, ethers.constants.AddressZero, '3000000000')
   })
 })
 
@@ -357,19 +310,19 @@ describe('UnbuttonToken:Contraction', () => {
     await mockAmpl.mint(deployerAddress, '2000')
     await mockAmpl.connect(deployer).approve(unbuttonToken.address, '2000')
     await unbuttonToken.connect(deployer).deposit('2000')
-    expect(await unbuttonToken.totalSupply()).to.eq('2000000000')
-    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('1000000000')
-    expect(await unbuttonToken.totalUnderlying()).to.eq('2000')
+    expect(await unbuttonToken.totalSupply()).to.eq('3000000000')
+    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('2000000000')
+    expect(await unbuttonToken.totalUnderlying()).to.eq('3000')
     expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
-      '1000',
+      '2000',
     )
 
     await mockAmpl.rebase(startingMultiplier / 2)
-    expect(await unbuttonToken.totalSupply()).to.eq('2000000000')
-    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('1000000000')
-    expect(await unbuttonToken.totalUnderlying()).to.eq('1000')
+    expect(await unbuttonToken.totalSupply()).to.eq('3000000000')
+    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('2000000000')
+    expect(await unbuttonToken.totalUnderlying()).to.eq('1500')
     expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
-      '500',
+      '1000',
     )
   })
 })
@@ -381,19 +334,19 @@ describe('UnbuttonToken:Expansion', () => {
     await mockAmpl.mint(deployerAddress, '2000')
     await mockAmpl.connect(deployer).approve(unbuttonToken.address, '2000')
     await unbuttonToken.connect(deployer).deposit('2000')
-    expect(await unbuttonToken.totalSupply()).to.eq('2000000000')
-    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('1000000000')
-    expect(await unbuttonToken.totalUnderlying()).to.eq('2000')
+    expect(await unbuttonToken.totalSupply()).to.eq('3000000000')
+    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('2000000000')
+    expect(await unbuttonToken.totalUnderlying()).to.eq('3000')
     expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
-      '1000',
+      '2000',
     )
 
     await mockAmpl.rebase(startingMultiplier * 3)
-    expect(await unbuttonToken.totalSupply()).to.eq('2000000000')
-    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('1000000000')
-    expect(await unbuttonToken.totalUnderlying()).to.eq('6000')
+    expect(await unbuttonToken.totalSupply()).to.eq('3000000000')
+    expect(await unbuttonToken.balanceOf(deployerAddress)).to.eq('2000000000')
+    expect(await unbuttonToken.totalUnderlying()).to.eq('9000')
     expect(await unbuttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
-      '3000',
+      '6000',
     )
   })
 })

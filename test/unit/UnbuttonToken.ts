@@ -53,12 +53,13 @@ async function setupContracts() {
   const unbuttonTokenFactory = await ethers.getContractFactory('UnbuttonToken')
   unbuttonToken = await unbuttonTokenFactory.connect(deployer).deploy()
 
-  const initialDeposit = await unbuttonToken.MINIMUM_DEPOSIT()
+  const initialDeposit = await unbuttonToken.INITIAL_DEPOSIT()
+  const initialRate = '1000000'
   await mockAmpl.mint(deployerAddress, initialDeposit)
   await mockAmpl
     .connect(deployer)
     .approve(unbuttonToken.address, initialDeposit)
-  await unbuttonToken.initialize(mockAmpl.address, NAME, SYMBOL)
+  await unbuttonToken.initialize(mockAmpl.address, NAME, SYMBOL, initialRate)
 }
 
 describe('UnbuttonToken', () => {
@@ -118,18 +119,6 @@ describe('UnbuttonToken Invalid Deposit', () => {
     await mockAmpl.mint(deployerAddress, '1000')
     await mockAmpl.connect(deployer).approve(unbuttonToken.address, '500')
     await expect(unbuttonToken.connect(deployer).deposit('1000')).to.be.reverted
-  })
-
-  it('should fail to deposit more than max_amount', async function () {
-    const maxUAmount = (await unbuttonToken.MAX_UNDERLYING()).sub('1')
-    const mintAmount = maxUAmount.sub(await unbuttonToken.MINIMUM_DEPOSIT())
-    await mockAmpl.mint(deployerAddress, mintAmount)
-    await mockAmpl.connect(deployer).approve(unbuttonToken.address, mintAmount)
-    await unbuttonToken.connect(deployer).deposit(mintAmount)
-    expect(await unbuttonToken.totalUnderlying()).eq(maxUAmount)
-    await expect(
-      unbuttonToken.connect(deployer).deposit('1'),
-    ).to.be.revertedWith('UnbuttonToken: too many unbutton tokens to mint')
   })
 })
 

@@ -29,18 +29,22 @@ contract UnbuttonTokenFactory is InstanceRegistry, IFactory {
         address underlying;
         string memory name;
         string memory symbol;
-        (underlying, name, symbol) = abi.decode(args, (address, string, string));
+        uint256 initialRate;
+        (underlying, name, symbol, initialRate) = abi.decode(
+            args,
+            (address, string, string, uint256)
+        );
 
         // Create instance
         address unbuttonToken = Clones.clone(template);
 
         // Approve transfer of initial deposit to instance
-        uint256 inititalDeposit = IUnbuttonToken(unbuttonToken).MINIMUM_DEPOSIT();
+        uint256 inititalDeposit = IUnbuttonToken(unbuttonToken).INITIAL_DEPOSIT();
         IERC20(underlying).safeTransferFrom(msg.sender, address(this), inititalDeposit);
         IERC20(underlying).approve(unbuttonToken, inititalDeposit);
 
         // Initialize instance
-        IUnbuttonToken(unbuttonToken).initialize(underlying, name, symbol);
+        IUnbuttonToken(unbuttonToken).initialize(underlying, name, symbol, initialRate);
 
         // Register instance
         InstanceRegistry._register(address(unbuttonToken));

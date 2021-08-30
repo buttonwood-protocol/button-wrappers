@@ -228,6 +228,11 @@ contract ButtonToken is IButtonToken, Ownable {
     // ButtonWrapper view methods
 
     /// @inheritdoc IButtonWrapper
+    function totalUnderlying() external view override returns (uint256) {
+        return _bitsToUAmount(_activeBits());
+    }
+
+    /// @inheritdoc IButtonWrapper
     function balanceOfUnderlying(address who) external view override returns (uint256) {
         if (who == address(0)) {
             return 0;
@@ -236,8 +241,17 @@ contract ButtonToken is IButtonToken, Ownable {
     }
 
     /// @inheritdoc IButtonWrapper
-    function totalUnderlying() external view override returns (uint256) {
-        return _bitsToUAmount(_activeBits());
+    function underlyingToWrapper(uint256 uAmount) external view override returns (uint256) {
+        uint256 price;
+        (price, ) = _queryPrice();
+        return _bitsToAmount(_uAmountToBits(uAmount), price);
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function wrapperToUnderlying(uint256 amount) external view override returns (uint256) {
+        uint256 price;
+        (price, ) = _queryPrice();
+        return _bitsToUAmount(_amountToBits(amount, price));
     }
 
     //--------------------------------------------------------------------------
@@ -339,14 +353,73 @@ contract ButtonToken is IButtonToken, Ownable {
     // ButtonWrapper write methods
 
     /// @inheritdoc IButtonWrapper
+    function mint(uint256 amount) external override onAfterRebase returns (uint256) {
+        uint256 bits = _amountToBits(amount, lastPrice);
+        uint256 uAmount = _bitsToUAmount(bits);
+        _deposit(_msgSender(), _msgSender(), uAmount, amount, bits);
+        return amount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function mintFor(address to, uint256 amount) external override onAfterRebase returns (uint256) {
+        uint256 bits = _amountToBits(amount, lastPrice);
+        uint256 uAmount = _bitsToUAmount(bits);
+        _deposit(_msgSender(), to, uAmount, amount, bits);
+        return amount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burn(uint256 amount) external override onAfterRebase returns (uint256) {
+        uint256 bits = _amountToBits(amount, lastPrice);
+        uint256 uAmount = _bitsToUAmount(bits);
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount, bits);
+        return amount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burnTo(address to, uint256 amount) external override onAfterRebase returns (uint256) {
+        uint256 bits = _amountToBits(amount, lastPrice);
+        uint256 uAmount = _bitsToUAmount(bits);
+        _withdraw(_msgSender(), to, uAmount, amount, bits);
+        return amount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burnAll() external override onAfterRebase returns (uint256) {
+        uint256 bits = _accountBits[_msgSender()];
+        uint256 uAmount = _bitsToUAmount(bits);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount, bits);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burnAllTo(address to) external override onAfterRebase returns (uint256) {
+        uint256 bits = _accountBits[_msgSender()];
+        uint256 uAmount = _bitsToUAmount(bits);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
+        _withdraw(_msgSender(), to, uAmount, amount, bits);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
     function deposit(uint256 uAmount) external override onAfterRebase returns (uint256) {
         uint256 bits = _uAmountToBits(uAmount);
         uint256 amount = _bitsToAmount(bits, lastPrice);
+        _deposit(_msgSender(), _msgSender(), uAmount, amount, bits);
+        return amount;
+    }
 
-        require(amount > 0, "ButtonToken: too few button tokens to mint");
-
-        IERC20(underlying).safeTransferFrom(_msgSender(), address(this), uAmount);
-        _transfer(address(0), _msgSender(), bits, amount);
+    /// @inheritdoc IButtonWrapper
+    function depositFor(address to, uint256 uAmount)
+        external
+        override
+        onAfterRebase
+        returns (uint256)
+    {
+        uint256 bits = _uAmountToBits(uAmount);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
+        _deposit(_msgSender(), to, uAmount, amount, bits);
         return amount;
     }
 
@@ -354,11 +427,20 @@ contract ButtonToken is IButtonToken, Ownable {
     function withdraw(uint256 uAmount) external override onAfterRebase returns (uint256) {
         uint256 bits = _uAmountToBits(uAmount);
         uint256 amount = _bitsToAmount(bits, lastPrice);
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount, bits);
+        return amount;
+    }
 
-        require(amount > 0, "ButtonToken: too few button tokens to burn");
-
-        _transfer(_msgSender(), address(0), bits, amount);
-        IERC20(underlying).safeTransfer(_msgSender(), uAmount);
+    /// @inheritdoc IButtonWrapper
+    function withdrawTo(address to, uint256 uAmount)
+        external
+        override
+        onAfterRebase
+        returns (uint256)
+    {
+        uint256 bits = _uAmountToBits(uAmount);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
+        _withdraw(_msgSender(), to, uAmount, amount, bits);
         return amount;
     }
 
@@ -367,17 +449,53 @@ contract ButtonToken is IButtonToken, Ownable {
         uint256 bits = _accountBits[_msgSender()];
         uint256 uAmount = _bitsToUAmount(bits);
         uint256 amount = _bitsToAmount(bits, lastPrice);
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount, bits);
+        return amount;
+    }
 
-        // Allows msg.sender to clear dust out
-        require(uAmount > 0, "ButtonToken: too few button tokens to burn");
-
-        _transfer(_msgSender(), address(0), bits, amount);
-        IERC20(underlying).safeTransfer(_msgSender(), uAmount);
+    /// @inheritdoc IButtonWrapper
+    function withdrawAllTo(address to) external override onAfterRebase returns (uint256) {
+        uint256 bits = _accountBits[_msgSender()];
+        uint256 uAmount = _bitsToUAmount(bits);
+        uint256 amount = _bitsToAmount(bits, lastPrice);
+        _withdraw(_msgSender(), to, uAmount, amount, bits);
         return amount;
     }
 
     //--------------------------------------------------------------------------
     // Private methods
+
+    /// @dev Internal method to commit deposit state.
+    ///      NOTE: Expects bits, uAmount, amount to be pre-calculated.
+    function _deposit(
+        address from,
+        address to,
+        uint256 uAmount,
+        uint256 amount,
+        uint256 bits
+    ) private {
+        require(amount > 0, "ButtonToken: too few button tokens to mint");
+
+        IERC20(underlying).safeTransferFrom(from, address(this), uAmount);
+
+        _transfer(address(0), to, bits, amount);
+    }
+
+    /// @dev Internal method to commit withdraw state.
+    ///      NOTE: Expects bits, uAmount, amount to be pre-calculated.
+    function _withdraw(
+        address from,
+        address to,
+        uint256 uAmount,
+        uint256 amount,
+        uint256 bits
+    ) private {
+        require(amount > 0, "ButtonToken: too few button tokens to burn");
+
+        _transfer(from, address(0), bits, amount);
+
+        IERC20(underlying).safeTransfer(to, uAmount);
+    }
 
     /// @dev Internal method to commit transfer state.
     ///      NOTE: Expects bits/amounts to be pre-calculated.

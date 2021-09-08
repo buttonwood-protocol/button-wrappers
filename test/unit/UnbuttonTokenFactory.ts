@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { Contract, Signer, BigNumber } from 'ethers'
+import { Contract, Signer, BigNumber, BigNumberish } from 'ethers'
 import { expect } from 'chai'
 
 const startingMultiplier = 10000
@@ -16,17 +16,20 @@ let accounts: Signer[],
   userCAddress: string,
   mockAmpl: Contract,
   template: Contract,
-  factory: Contract
+  factory: Contract,
+  initialDeposit: BigNumberish,
+  initialRate: BigNumber
 
 async function createInstance(
   factory: Contract,
   underlying: String,
   name: String,
   symbol: String,
+  initialRate: BigNumber,
 ) {
   const args = ethers.utils.defaultAbiCoder.encode(
-    ['address', 'string', 'string'],
-    [underlying, name, symbol],
+    ['address', 'string', 'string', 'uint256'],
+    [underlying, name, symbol, initialRate],
   )
   const instanceAddress = await factory.callStatic['create(bytes)'](args)
   await factory.create(args)
@@ -49,13 +52,17 @@ async function setupContracts() {
   userBAddress = await userB.getAddress()
   userCAddress = await userC.getAddress()
 
+  const AMPL_TOTAL_SUPPLY = '50000000000000000' // 50m AMPL
+  const MAX_SUPPLY = '10000000000000000000000000' // 10m unbutton tokens
+  initialDeposit = '1000'
+
   const rebasingErc20ContractFactory = await ethers.getContractFactory(
     'MockRebasingERC20',
   )
   mockAmpl = await rebasingErc20ContractFactory
     .connect(deployer)
     .deploy('Ampleforth', 'AMPL', startingMultiplier, multiplierGranularity)
-  await mockAmpl.mint(deployerAddress, '100000')
+  await mockAmpl.mint(deployerAddress, AMPL_TOTAL_SUPPLY)
 
   const unbuttonTokenContractFactory = await ethers.getContractFactory(
     'UnbuttonToken',
@@ -65,6 +72,8 @@ async function setupContracts() {
   factory = await (await ethers.getContractFactory('UnbuttonTokenFactory'))
     .connect(deployer)
     .deploy(template.address)
+
+  initialRate = BigNumber.from('1').mul(MAX_SUPPLY).div(AMPL_TOTAL_SUPPLY)
 }
 
 describe('UnbuttonTokenFactory', () => {
@@ -90,32 +99,69 @@ describe('UnbuttonToken:create', () => {
   beforeEach('setup UnbuttonTokenFactory contract', setupContracts)
 
   it('Clone should have proper parameters set', async function () {
-    await mockAmpl.approve(factory.address, await template.MINIMUM_DEPOSIT())
+    await mockAmpl.approve(factory.address, await template.INITIAL_DEPOSIT())
     const ubToken = await createInstance(
       factory,
       mockAmpl.address,
       'UNBUTTON-Ampleforth',
       'UNBUTTON-AMPL',
+      initialRate,
     )
 
     expect(await ubToken.underlying()).to.eq(mockAmpl.address)
     expect(await ubToken.name()).to.eq('UNBUTTON-Ampleforth')
     expect(await ubToken.symbol()).to.eq('UNBUTTON-AMPL')
-    expect(await ubToken.totalSupply()).to.eq('1000000000')
+    expect(await ubToken.totalSupply()).to.eq(initialRate.mul(initialDeposit))
     expect(await ubToken.totalUnderlying()).to.eq('1000')
   })
 
   it('Instance should register into instanceSet', async function () {
-    await mockAmpl.approve(factory.address, await template.MINIMUM_DEPOSIT())
+    await mockAmpl.approve(factory.address, await template.INITIAL_DEPOSIT())
     const ubToken = await createInstance(
       factory,
       mockAmpl.address,
       'UNBUTTON-Ampleforth',
       'UNBUTTON-AMPL',
+      initialRate,
     )
 
     expect(await factory.instanceCount()).to.eq(1)
     expect(await factory.instanceAt(0)).to.eq(ubToken.address)
     expect(await factory.isInstance(ubToken.address)).to.eq(true)
+  })
+
+  it('deposits should have the correct conversion', async function () {
+    await mockAmpl.approve(factory.address, await template.INITIAL_DEPOSIT())
+    const ubToken = await createInstance(
+      factory,
+      mockAmpl.address,
+      'UNBUTTON-Ampleforth',
+      'UNBUTTON-AMPL',
+      initialRate,
+    )
+
+    {
+      const depositAmt = '5000000000000000' // 5m or 10% of ampl supply
+      await mockAmpl.connect(deployer).approve(ubToken.address, depositAmt)
+      await ubToken.connect(deployer).deposit(depositAmt)
+
+      // 1m or 10% of ub supply
+      expect(await ubToken.balanceOf(deployerAddress)).to.eq(
+        '1000000000000000000000000',
+      )
+    }
+
+    await mockAmpl.rebase(2 * startingMultiplier)
+
+    {
+      const depositAmt = '10000000000000000' // 10m or 10% of ampl supply
+      await mockAmpl.connect(deployer).approve(ubToken.address, depositAmt)
+      await ubToken.connect(deployer).deposit(depositAmt)
+
+      // 2m or 20% of ub supply
+      expect(await ubToken.balanceOf(deployerAddress)).to.eq(
+        '2000000000000000000000000',
+      )
+    }
   })
 })

@@ -25,19 +25,29 @@ import {
 contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     //--------------------------------------------------------------------------
+    // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
+    // The maximum units of the underlying token that can be
+    // safely deposited into this contract without any numeric overflow
+    // is calculated as:
+    //
+    // MAX_UNDERLYING = sqrt(MAX_UINT256/INITIAL_RATE)
+    //
+    // where INITIAL_RATE is the conversion between underlying tokens to unbutton tokens
+    // for the initial mint.
+    //
+    // Since the underlying balances increase due both users depositing
+    // into this contract as well as the underlying token rebasing,
+    // there's no way to absolutely ENFORCE this bound.
+    //
+    // In practice the underlying of any token with a reasonable supply
+    // will never be this high.
+
+    //--------------------------------------------------------------------------
     // Constants
 
     /// @dev Small deposit which is locked to the contract to ensure that
     ///      the `totalUnderlying` balance is always non-zero.
-    uint256 public constant MINIMUM_DEPOSIT = 1_000;
-
-    /// @dev Initial conversion between underlying tokens to unbutton tokens.
-    uint256 public constant INITIAL_RATE = 1_000_000;
-
-    /// @dev The maximum units of the underlying token that can be
-    ///      safely deposited into this contract without any numeric overflow.
-    /// MAX_UNDERLYING = sqrt(MAX_UINT256/INITIAL_RATE)
-    uint256 public constant MAX_UNDERLYING = type(uint128).max / 1_000;
+    uint256 public constant INITIAL_DEPOSIT = 1_000;
 
     //--------------------------------------------------------------------------
     // Attributes
@@ -53,18 +63,19 @@ contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
     function initialize(
         address underlying_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        uint256 initialRate
     ) public initializer {
         __ERC20_init(name_, symbol_);
         __ERC20Permit_init(name_);
         underlying = underlying_;
 
         // NOTE: First mint with initial micro deposit
-        uint256 mintAmount = MINIMUM_DEPOSIT * INITIAL_RATE;
+        uint256 mintAmount = INITIAL_DEPOSIT * initialRate;
         IERC20Upgradeable(underlying).safeTransferFrom(
             _msgSender(),
             address(this),
-            MINIMUM_DEPOSIT
+            INITIAL_DEPOSIT
         );
         _mint(address(this), mintAmount);
     }
@@ -73,52 +84,91 @@ contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
     // ButtonWrapper write methods
 
     /// @inheritdoc IButtonWrapper
+    function mint(uint256 amount) external override returns (uint256) {
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _deposit(_msgSender(), _msgSender(), uAmount, amount);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function mintFor(address to, uint256 amount) external override returns (uint256) {
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _deposit(_msgSender(), to, uAmount, amount);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burn(uint256 amount) external override returns (uint256) {
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burnTo(address to, uint256 amount) external override returns (uint256) {
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), to, uAmount, amount);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burnAll() external override returns (uint256) {
+        uint256 amount = balanceOf(_msgSender());
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function burnAllTo(address to) external override returns (uint256) {
+        uint256 amount = balanceOf(_msgSender());
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), to, uAmount, amount);
+        return uAmount;
+    }
+
+    /// @inheritdoc IButtonWrapper
     function deposit(uint256 uAmount) external override returns (uint256) {
-        uint256 totalUnderlying_ = _queryUnderlyingBalance();
-        require(
-            (uAmount + totalUnderlying_) < MAX_UNDERLYING,
-            "UnbuttonToken: too many unbutton tokens to mint"
-        );
+        uint256 amount = _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance(), totalSupply());
+        _deposit(_msgSender(), _msgSender(), uAmount, amount);
+        return amount;
+    }
 
-        uint256 mintAmount = _fromUnderlyingAmount(uAmount, totalUnderlying_, totalSupply());
-
-        require(mintAmount > 0, "UnbuttonToken: too few unbutton tokens to mint");
-
-        IERC20Upgradeable(underlying).safeTransferFrom(_msgSender(), address(this), uAmount);
-
-        _mint(_msgSender(), mintAmount);
-
-        return mintAmount;
+    /// @inheritdoc IButtonWrapper
+    function depositFor(address to, uint256 uAmount) external override returns (uint256) {
+        uint256 amount = _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance(), totalSupply());
+        _deposit(_msgSender(), to, uAmount, amount);
+        return amount;
     }
 
     /// @inheritdoc IButtonWrapper
     function withdraw(uint256 uAmount) external override returns (uint256) {
-        uint256 burnAmount =
-            _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance(), totalSupply());
+        uint256 amount = _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount);
+        return amount;
+    }
 
-        require(burnAmount > 0, "UnbuttonToken: too few unbutton tokens to burn");
-
-        _burn(_msgSender(), burnAmount);
-
-        IERC20Upgradeable(underlying).safeTransfer(_msgSender(), uAmount);
-
-        return burnAmount;
+    /// @inheritdoc IButtonWrapper
+    function withdrawTo(address to, uint256 uAmount) external override returns (uint256) {
+        uint256 amount = _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), to, uAmount, amount);
+        return amount;
     }
 
     /// @inheritdoc IButtonWrapper
     function withdrawAll() external override returns (uint256) {
-        uint256 totalUnderlying_ = _queryUnderlyingBalance();
-        uint256 totalSupply_ = totalSupply();
-        uint256 burnAmount = balanceOf(_msgSender());
-        uint256 uAmount = _toUnderlyingAmount(burnAmount, totalUnderlying_, totalSupply_);
+        uint256 amount = balanceOf(_msgSender());
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), _msgSender(), uAmount, amount);
+        return amount;
+    }
 
-        require(burnAmount > 0, "UnbuttonToken: too few unbutton tokens to burn");
-
-        _burn(_msgSender(), burnAmount);
-
-        IERC20Upgradeable(underlying).safeTransfer(_msgSender(), uAmount);
-
-        return burnAmount;
+    /// @inheritdoc IButtonWrapper
+    function withdrawAllTo(address to) external override returns (uint256) {
+        uint256 amount = balanceOf(_msgSender());
+        uint256 uAmount = _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+        _withdraw(_msgSender(), to, uAmount, amount);
+        return amount;
     }
 
     //--------------------------------------------------------------------------
@@ -134,8 +184,52 @@ contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
         return _toUnderlyingAmount(balanceOf(owner), _queryUnderlyingBalance(), totalSupply());
     }
 
+    /// @inheritdoc IButtonWrapper
+    function underlyingToWrapper(uint256 uAmount) external view override returns (uint256) {
+        return _fromUnderlyingAmount(uAmount, _queryUnderlyingBalance(), totalSupply());
+    }
+
+    /// @inheritdoc IButtonWrapper
+    function wrapperToUnderlying(uint256 amount) external view override returns (uint256) {
+        return _toUnderlyingAmount(amount, _queryUnderlyingBalance(), totalSupply());
+    }
+
     //--------------------------------------------------------------------------
     // Private methods
+
+    /// @dev Internal method to commit deposit state.
+    ///      NOTE: Expects uAmount, amount to be pre-calculated.
+    function _deposit(
+        address from,
+        address to,
+        uint256 uAmount,
+        uint256 amount
+    ) private {
+        require(amount > 0, "UnbuttonToken: too few unbutton tokens to mint");
+
+        // Transfer underlying token from the initiator to the contract
+        IERC20Upgradeable(underlying).safeTransferFrom(from, address(this), uAmount);
+
+        // Mint unbutton token to the beneficiary
+        _mint(to, amount);
+    }
+
+    /// @dev Internal method to commit deposit state.
+    ///      NOTE: Expects uAmount, amount to be pre-calculated.
+    function _withdraw(
+        address from,
+        address to,
+        uint256 uAmount,
+        uint256 amount
+    ) private {
+        require(amount > 0, "UnbuttonToken: too few unbutton tokens to burn");
+
+        // Burn unbutton tokens from the initiator
+        _burn(from, amount);
+
+        // Transfer underlying tokens to the beneficiary
+        IERC20Upgradeable(underlying).safeTransfer(to, uAmount);
+    }
 
     /// @dev Queries the underlying ERC-20 balance of this contract.
     function _queryUnderlyingBalance() private view returns (uint256) {

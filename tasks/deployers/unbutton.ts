@@ -97,10 +97,7 @@ task('deploy:UnbuttonToken')
     if (initialAllowance.lt(expectedAllowance)) {
       console.log('Setting allowance for initial deposit')
       await (
-        await underlyingToken.approve(
-          ubFactory.address,
-          expectedAllowance,
-        )
+        await underlyingToken.approve(ubFactory.address, expectedAllowance)
       ).wait(2)
     }
 

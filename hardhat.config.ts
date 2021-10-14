@@ -19,21 +19,19 @@ export default {
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/${process.env.INFURA_SECRET}`,
       accounts: {
-        mnemonic:
-          process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+        mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
       },
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_SECRET}`,
       accounts: {
-        mnemonic:
-          process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+        mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
       },
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_SECRET}`,
       accounts: {
-        mnemonic: process.env.PROD_MNEMONIC  || DEFAULT_MNEMONIC,
+        mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
       },
     },
   },

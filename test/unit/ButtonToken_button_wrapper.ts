@@ -484,3 +484,195 @@ describe('ButtonToken:withdrawAll', async () => {
       )
   })
 })
+
+describe('ButtonToken:depositFor', async function () {
+  beforeEach('setup ButtonToken contract', async () => {
+    await setupContracts()
+
+    cAmount = toFixedPtAmt('1')
+    await mockBTC.connect(deployer).mint(userAAddress, cAmount)
+
+    await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
+  })
+
+  it('should transfer underlying from the user', async function () {
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq(cAmount)
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+    expect(await buttonToken.totalUnderlying()).to.eq('0')
+
+    await expect(
+      buttonToken.connect(userA).depositFor(deployerAddress, cAmount),
+    )
+      .to.emit(mockBTC, 'Transfer')
+      .withArgs(userAAddress, buttonToken.address, cAmount)
+
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+    expect(await buttonToken.balanceOfUnderlying(deployerAddress)).to.eq(
+      cAmount,
+    )
+    expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
+  })
+
+  it('should deposit button tokens', async function () {
+    expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
+
+    expect(
+      await buttonToken
+        .connect(userA)
+        .callStatic.depositFor(deployerAddress, cAmount),
+    ).to.eq(toFixedPtAmt('10000'))
+
+    await buttonToken.connect(userA).depositFor(deployerAddress, cAmount)
+
+    expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
+    expect(await buttonToken.balanceOf(deployerAddress)).to.eq(
+      toFixedPtAmt('10000'),
+    )
+  })
+
+  it('should emit transfer log', async function () {
+    await expect(
+      buttonToken.connect(userA).depositFor(deployerAddress, cAmount),
+    )
+      .to.emit(buttonToken, 'Transfer')
+      .withArgs(
+        ethers.constants.AddressZero,
+        deployerAddress,
+        toFixedPtAmt('10000'),
+      )
+  })
+})
+
+describe('ButtonToken:withdrawTo', async function () {
+  beforeEach(async function () {
+    await setupContracts()
+
+    cAmount = toFixedPtAmt('2')
+    withdrawCAmount = toFixedPtAmt('1')
+
+    await mockBTC.connect(deployer).mint(userAAddress, cAmount)
+    await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
+
+    await buttonToken.connect(userA).deposit(cAmount)
+  })
+
+  it('should transfer underlying to the user', async function () {
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+    expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
+
+    await expect(
+      buttonToken.connect(userA).withdrawTo(deployerAddress, withdrawCAmount),
+    )
+      .to.emit(mockBTC, 'Transfer')
+      .withArgs(buttonToken.address, deployerAddress, withdrawCAmount)
+
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq(toFixedPtAmt('0'))
+    expect(await mockBTC.balanceOf(deployerAddress)).to.eq(toFixedPtAmt('1'))
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(
+      toFixedPtAmt('1'),
+    )
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(
+      cAmount.sub(withdrawCAmount),
+    )
+    expect(await buttonToken.totalUnderlying()).to.eq(
+      cAmount.sub(withdrawCAmount),
+    )
+  })
+
+  it('should deposit button tokens', async function () {
+    expect(await buttonToken.balanceOf(userAAddress)).to.eq(
+      toFixedPtAmt('20000'),
+    )
+
+    expect(
+      await buttonToken
+        .connect(userA)
+        .callStatic.withdrawTo(deployerAddress, withdrawCAmount),
+    ).to.eq(toFixedPtAmt('10000'))
+    await buttonToken
+      .connect(userA)
+      .withdrawTo(deployerAddress, withdrawCAmount)
+
+    expect(await buttonToken.balanceOf(userAAddress)).to.eq(
+      toFixedPtAmt('10000'),
+    )
+  })
+
+  it('should emit transfer log', async function () {
+    await expect(
+      buttonToken.connect(userA).withdrawTo(deployerAddress, withdrawCAmount),
+    )
+      .to.emit(buttonToken, 'Transfer')
+      .withArgs(
+        userAAddress,
+        ethers.constants.AddressZero,
+        toFixedPtAmt('10000'),
+      )
+  })
+})
+
+describe('ButtonToken:withdrawAllTo', async function () {
+  beforeEach(async function () {
+    await setupContracts()
+
+    cAmount = toFixedPtAmt('2')
+
+    await mockBTC.connect(deployer).mint(userAAddress, cAmount)
+    await mockBTC.connect(userA).approve(buttonToken.address, cAmount)
+
+    await buttonToken.connect(userA).deposit(cAmount)
+  })
+
+  it('should transfer underlying to the user', async function () {
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq('0')
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq(cAmount)
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq(cAmount)
+    expect(await buttonToken.totalUnderlying()).to.eq(cAmount)
+
+    await expect(buttonToken.connect(userA).withdrawAllTo(deployerAddress))
+      .to.emit(mockBTC, 'Transfer')
+      .withArgs(buttonToken.address, deployerAddress, cAmount)
+
+    expect(await mockBTC.balanceOf(userAAddress)).to.eq(toFixedPtAmt('0'))
+    expect(await mockBTC.balanceOf(deployerAddress)).to.eq(toFixedPtAmt('2'))
+    expect(await mockBTC.balanceOf(buttonToken.address)).to.eq('0')
+
+    expect(await buttonToken.balanceOfUnderlying(userAAddress)).to.eq('0')
+    expect(await buttonToken.totalUnderlying()).to.eq('0')
+  })
+
+  it('should deposit button tokens', async function () {
+    expect(await buttonToken.balanceOf(userAAddress)).to.eq(
+      toFixedPtAmt('20000'),
+    )
+
+    expect(
+      await buttonToken
+        .connect(userA)
+        .callStatic.withdrawAllTo(deployerAddress),
+    ).to.eq(toFixedPtAmt('20000'))
+    await buttonToken.connect(userA).withdrawAllTo(deployerAddress)
+
+    expect(await buttonToken.balanceOf(userAAddress)).to.eq('0')
+  })
+
+  it('should emit transfer log', async function () {
+    await expect(buttonToken.connect(userA).withdrawAllTo(deployerAddress))
+      .to.emit(buttonToken, 'Transfer')
+      .withArgs(
+        userAAddress,
+        ethers.constants.AddressZero,
+        toFixedPtAmt('20000'),
+      )
+  })
+})

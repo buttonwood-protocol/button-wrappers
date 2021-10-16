@@ -19,4 +19,12 @@ interface IButtonToken is IButtonWrapper, IRebasingERC20 {
     /// @dev Log to record changes to the oracle.
     /// @param oracle The address of the new oracle.
     event OracleUpdated(address oracle);
+
+    /// @dev Contract initializer
+    function initialize(
+        address underlying_,
+        string memory name_,
+        string memory symbol_,
+        address oracle_
+    ) external;
 }

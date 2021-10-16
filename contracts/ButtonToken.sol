@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.4;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {IOracle} from "./interfaces/IOracle.sol";
 import "./interfaces/IButtonToken.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title The ButtonToken ERC20 wrapper.
@@ -46,7 +48,7 @@ import "./interfaces/IButtonToken.sol";
  *
  *
  */
-contract ButtonToken is IButtonToken, Ownable {
+contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // We make the following guarantees:
     // - If address 'A' transfers x button tokens to address 'B'.
@@ -90,7 +92,7 @@ contract ButtonToken is IButtonToken, Ownable {
     // Attributes
 
     /// @inheritdoc IButtonWrapper
-    address public immutable override underlying;
+    address public override underlying;
 
     /// @inheritdoc IButtonToken
     address public override oracle;
@@ -137,14 +139,16 @@ contract ButtonToken is IButtonToken, Ownable {
     /// @param name_ The ERC20 name.
     /// @param symbol_ The ERC20 symbol.
     /// @param oracle_ The oracle which provides the underlying token price.
-    constructor(
+    function initialize(
         address underlying_,
         string memory name_,
         string memory symbol_,
         address oracle_
-    ) {
+    ) public override initializer {
         require(underlying_ != address(0), "ButtonToken: invalid underlying reference");
 
+        // Initializing ownership to `msg.sender`
+        __Ownable_init();
         underlying = underlying_;
         name = name_;
         symbol = symbol_;

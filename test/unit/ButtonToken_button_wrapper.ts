@@ -42,9 +42,9 @@ async function setupContracts() {
   await mockOracle.setData(toOracleValue('10000'), true)
 
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
-  buttonToken = await buttonTokenFactory
-    .connect(deployer)
-    .deploy(mockBTC.address, NAME, SYMBOL, mockOracle.address)
+  buttonToken = await buttonTokenFactory.connect(deployer).deploy()
+
+  buttonToken.initialize(mockBTC.address, NAME, SYMBOL, mockOracle.address)
 }
 
 describe('ButtonToken:underlying', async () => {

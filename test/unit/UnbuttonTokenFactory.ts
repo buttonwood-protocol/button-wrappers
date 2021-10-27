@@ -32,7 +32,7 @@ async function createInstance(
     [underlying, name, symbol, initialRate],
   )
   const instanceAddress = await factory.callStatic['create(bytes)'](args)
-  await factory.create(args)
+  await factory['create(bytes)'](args)
 
   const instance = (await ethers.getContractFactory('UnbuttonToken'))
     .connect(deployer)
@@ -113,6 +113,24 @@ describe('UnbuttonToken:create', () => {
     expect(await ubToken.symbol()).to.eq('UNBUTTON-AMPL')
     expect(await ubToken.totalSupply()).to.eq(initialRate.mul(initialDeposit))
     expect(await ubToken.totalUnderlying()).to.eq('1000')
+  })
+
+  it('Unpacked args should run with correct values', async function () {
+    await mockAmpl.approve(factory.address, await template.INITIAL_DEPOSIT())
+    const instanceAddress = await factory.callStatic[
+      'create(address,string,string,uint256)'
+    ](mockAmpl.address, 'UNBUTTON-Ampleforth', 'UNBUTTON-AMPL', initialRate)
+    await factory['create(address,string,string,uint256)'](
+      mockAmpl.address,
+      'UNBUTTON-Ampleforth',
+      'UNBUTTON-AMPL',
+      initialRate,
+    )
+
+    const ubToken = (await ethers.getContractFactory('UnbuttonToken'))
+      .connect(deployer)
+      .attach(instanceAddress)
+    expect(await ubToken.underlying()).to.eq(mockAmpl.address)
   })
 
   it('Instance should register into instanceSet', async function () {

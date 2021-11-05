@@ -172,12 +172,12 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     function updateOracle(address oracle_) public override onlyOwner {
         uint256 price;
         bool valid;
-        (price, valid) = IOracle(oracle_).getData();
-        require(valid, "ButtonToken: unable to fetch data from oracle");
 
         oracle = oracle_;
-        emit OracleUpdated(oracle);
+        (price, valid) = _queryPrice();
+        require(valid, "ButtonToken: unable to fetch data from oracle");
 
+        emit OracleUpdated(oracle);
         _rebase(price);
     }
 
@@ -544,7 +544,9 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         bool valid;
         (newPrice, valid) = IOracle(oracle).getData();
 
-        return (valid ? newPrice : lastPrice, valid);
+        // Note: we consider newPrice == 0 to be invalid because accounting fails with price == 0
+        // For example, _bitsPerToken needs to be able to divide by price so a div/0 is caused
+        return (valid && newPrice > 0 ? newPrice : lastPrice, valid && newPrice > 0);
     }
 
     /// @dev Convert button token amount to bits.

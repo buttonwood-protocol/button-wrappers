@@ -5,7 +5,7 @@ contract WETH9 {
     string public name = "Wrapped Ether";
     string public symbol = "WETH";
     uint8 public decimals = 18;
-    uint256 constant MAX_UINT = 2**256 - 1;
+    uint256 constant MAX_UINT = type(uint256).max;
 
     event Approval(address indexed src, address indexed guy, uint256 wad);
     event Transfer(address indexed src, address indexed dst, uint256 wad);

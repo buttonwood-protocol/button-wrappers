@@ -70,17 +70,35 @@ describe('ButtonTokenWethRouter', () => {
     expect(await buttonToken.balanceOf(await user.getAddress())).to.equal(
       depositAmount.mul('10000'),
     )
+
+    expect(await weth.balanceOf(router.address)).to.equal('0');
+    expect(await buttonToken.balanceOf(router.address)).to.equal('0');
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
+  })
+
+  it('should fail to deposit if no eth given', async function () {
+    const { router, weth, accounts, buttonToken } = await loadFixture(fixture)
+    const [user] = accounts;
+
+    const depositAmount = ethers.utils.parseEther('0')
+    await expect(
+      router.deposit(buttonToken.address, { value: depositAmount }),
+    ).to.be.revertedWith('ButtonTokenWethRouter: No ETH supplied')
+
+    expect(await weth.balanceOf(router.address)).to.equal('0');
+    expect(await buttonToken.balanceOf(router.address)).to.equal('0');
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
   })
 
   it('should burn button tokens', async function () {
-    const { router, accounts, buttonToken } = await loadFixture(fixture)
+    const { router, accounts, weth, buttonToken } = await loadFixture(fixture)
     const [user] = accounts
 
     const depositAmount = ethers.utils.parseEther('5')
     await router.deposit(buttonToken.address, { value: depositAmount })
 
     const userStartingBalance = await user.getBalance()
-    await buttonToken.approve(router.address, ethers.utils.parseEther('50000'))
+    await buttonToken.approve(router.address, ethers.utils.parseEther('2500'))
 
     const burnAmount = ethers.utils.parseEther('2500')
     await expect(router.burn(buttonToken.address, burnAmount))
@@ -96,10 +114,14 @@ describe('ButtonTokenWethRouter', () => {
         .sub(userStartingBalance)
         .gt(ethers.utils.parseEther('0.24')),
     ).to.be.true
+
+    expect(await weth.balanceOf(router.address)).to.equal('0');
+    expect(await buttonToken.balanceOf(router.address)).to.equal('0');
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
   })
 
   it('should burn all button tokens', async function () {
-    const { router, accounts, buttonToken } = await loadFixture(fixture)
+    const { router, accounts, weth, buttonToken } = await loadFixture(fixture)
     const [user] = accounts
 
     const depositAmount = ethers.utils.parseEther('5')
@@ -126,23 +148,48 @@ describe('ButtonTokenWethRouter', () => {
         .sub(userStartingBalance)
         .gt(ethers.utils.parseEther('4.99')),
     ).to.be.true
+
+    expect(await weth.balanceOf(router.address)).to.equal('0');
+    expect(await buttonToken.balanceOf(router.address)).to.equal('0');
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
   })
 
   it('should fail to burn all if not approved', async function () {
-    const { router, buttonToken } = await loadFixture(fixture)
+    const { router, weth, accounts, buttonToken } = await loadFixture(fixture)
+    const [user] = accounts;
 
     const depositAmount = ethers.utils.parseEther('5')
     await router.deposit(buttonToken.address, { value: depositAmount })
 
     await expect(router.burnAll(buttonToken.address)).to.be.reverted
+
+    expect(await weth.balanceOf(router.address)).to.equal('0');
+    expect(await buttonToken.balanceOf(router.address)).to.equal('0');
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
   })
 
   it('should fail to burn if not approved', async function () {
-    const { router, buttonToken } = await loadFixture(fixture)
+    const { router, weth, accounts, buttonToken } = await loadFixture(fixture)
+    const [user] = accounts;
 
     const depositAmount = ethers.utils.parseEther('5')
     await router.deposit(buttonToken.address, { value: depositAmount })
 
     await expect(router.burn(buttonToken.address, depositAmount)).to.be.reverted
+
+    expect(await weth.balanceOf(router.address)).to.equal('0');
+    expect(await buttonToken.balanceOf(router.address)).to.equal('0');
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
+  })
+
+  it('should send ETH directly to the router', async function () {
+    const { router, accounts } = await loadFixture(fixture)
+    const [user] = accounts;
+
+    const depositAmount = ethers.utils.parseEther('5')
+    await expect(user.sendTransaction({ to: router.address, value: depositAmount }))
+      .to.be.revertedWith('ButtonTokenWethRouter: unexpected receive');
+
+    expect(await user.provider!.getBalance(router.address)).to.equal('0');
   })
 })

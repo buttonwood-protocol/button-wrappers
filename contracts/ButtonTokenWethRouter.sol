@@ -17,7 +17,9 @@ contract ButtonTokenWethRouter is ReentrancyGuard {
         weth = IWETH9(_weth);
     }
 
-    receive() external payable {}
+    receive() external payable {
+        require(msg.sender == address(weth), "ButtonTokenWethRouter: unexpected receive");
+    }
 
     /**
      * @dev Deposit the given amount of ETH into the given ButtonToken
@@ -38,7 +40,7 @@ contract ButtonTokenWethRouter is ReentrancyGuard {
      * @dev Withdraw the given amount of button tokens from the given ButtonToken
      *  Returns the output ETH to the user
      *
-     * @param buttonToken the button token to deposit into
+     * @param buttonToken the button token to burn from
      * @param amount The amount of ButtonTokens to burn
      * @return The amount of ButtonTokens burned
      */
@@ -55,7 +57,7 @@ contract ButtonTokenWethRouter is ReentrancyGuard {
      * @dev Withdraw all button tokens from the given ButtonToken
      *  Returns the output ETH to the user
      *
-     * @param buttonToken the button token to deposit into
+     * @param buttonToken the button token to burn from
      * @return The amount of ButtonTokens burned
      */
     function burnAll(address buttonToken) external nonReentrant returns (uint256) {

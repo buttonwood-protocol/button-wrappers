@@ -149,6 +149,42 @@ describe('ButtonToken:updateOracle', async () => {
       expect(await buttonToken.lastPrice()).to.eq(toOracleValue('45000'))
     })
   })
+
+  describe('when the new price oracle is ZERO', function () {
+    it('should update price, freeze funds', async function () {
+      const MINT_AMT = toFixedPtAmt('1')
+
+      // legit user deposits tokens
+      await mockBTC.connect(deployer).mint(deployerAddress, MINT_AMT)
+      await mockBTC.connect(deployer).approve(buttonToken.address, MINT_AMT)
+      await buttonToken.connect(deployer).deposit(MINT_AMT)
+
+      // malicious owner updates price to zero
+      const oracleFactory = await ethers.getContractFactory('MockOracle')
+      mockOracle = await oracleFactory.connect(deployer).deploy()
+      await mockOracle.setData(toOracleValue('1'), true)
+
+      expect(await buttonToken.oracle()).to.not.eq(mockOracle.address)
+
+      await expect(
+        buttonToken.connect(deployer).updateOracle(mockOracle.address),
+      )
+        .to.emit(buttonToken, 'Rebase')
+        .withArgs('3', toOracleValue('1'))
+        .to.emit(buttonToken, 'OracleUpdated')
+        .withArgs(mockOracle.address)
+
+      await mockOracle.setData(toOracleValue('0'), true)
+      await expect(buttonToken.rebase()).to.not.be.reverted
+
+      expect(await buttonToken.oracle()).to.eq(mockOracle.address)
+      expect(await buttonToken.lastPrice()).to.eq(toOracleValue('1'))
+
+      // checks that you can still withdraw
+      await expect(buttonToken.connect(deployer).withdraw(MINT_AMT)).to.not.be
+        .reverted
+    })
+  })
 })
 
 describe('ButtonToken:Rebase:Expansion', async () => {
@@ -482,39 +518,5 @@ describe('ButtonToken:Transfer', function () {
           ),
       ).to.be.reverted
     })
-  })
-})
-
-describe('when the new price oracle is ZERO', function () {
-  it('should update price, freeze funds', async function () {
-    const MINT_AMT = toFixedPtAmt('1')
-
-    // legit user deposits tokens
-    await mockBTC.connect(deployer).mint(deployerAddress, MINT_AMT)
-    await mockBTC.connect(deployer).approve(buttonToken.address, MINT_AMT)
-    await buttonToken.connect(deployer).deposit(MINT_AMT)
-
-    // malicious owner updates price to zero
-    const oracleFactory = await ethers.getContractFactory('MockOracle')
-    mockOracle = await oracleFactory.connect(deployer).deploy()
-    await mockOracle.setData(toOracleValue('1'), true)
-
-    expect(await buttonToken.oracle()).to.not.eq(mockOracle.address)
-
-    await expect(buttonToken.connect(deployer).updateOracle(mockOracle.address))
-      .to.emit(buttonToken, 'Rebase')
-      .withArgs('2', toOracleValue('1'))
-      .to.emit(buttonToken, 'OracleUpdated')
-      .withArgs(mockOracle.address)
-
-    await mockOracle.setData(toOracleValue('0'), true)
-    await expect(buttonToken.rebase()).to.not.be.reverted
-
-    expect(await buttonToken.oracle()).to.eq(mockOracle.address)
-    expect(await buttonToken.lastPrice()).to.eq(toOracleValue('1'))
-
-    // checks that you can still withdraw
-    await expect(buttonToken.connect(deployer).withdraw(MINT_AMT)).to.not.be
-      .reverted
   })
 })

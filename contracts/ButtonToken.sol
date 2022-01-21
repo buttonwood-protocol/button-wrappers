@@ -360,7 +360,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         uint256 bits = _amountToBits(amount, lastPrice);
         uint256 uAmount = _bitsToUAmount(bits);
         _deposit(_msgSender(), _msgSender(), uAmount, amount, bits);
-        return amount;
+        return uAmount;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -368,7 +368,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         uint256 bits = _amountToBits(amount, lastPrice);
         uint256 uAmount = _bitsToUAmount(bits);
         _deposit(_msgSender(), to, uAmount, amount, bits);
-        return amount;
+        return uAmount;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -376,7 +376,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         uint256 bits = _amountToBits(amount, lastPrice);
         uint256 uAmount = _bitsToUAmount(bits);
         _withdraw(_msgSender(), _msgSender(), uAmount, amount, bits);
-        return amount;
+        return uAmount;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -384,7 +384,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         uint256 bits = _amountToBits(amount, lastPrice);
         uint256 uAmount = _bitsToUAmount(bits);
         _withdraw(_msgSender(), to, uAmount, amount, bits);
-        return amount;
+        return uAmount;
     }
 
     /// @inheritdoc IButtonWrapper

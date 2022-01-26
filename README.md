@@ -63,6 +63,10 @@ yarn profile
 
 [GNU General Public License v3.0](./LICENSE)
 
+## Notes
+
+Note that the ButtonToken contract _does not_ work with fee-on-transfer (FoT) tokens. These tokens are not compatible with the accounting of the `deposit/mint` functions in ButtonToken.
+
 ## Bug Bounty
 
 [Details](bug-bounty.md)

@@ -38,18 +38,8 @@ contract MockRebasingERC20 is ERC20 {
         return true;
     }
 
-    function allowance(address owner, address spender)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return applyMultiplier(super.allowance(owner, spender));
-    }
-
     function approve(address spender, uint256 amount) public virtual override returns (bool) {
-        _approve(_msgSender(), spender, applyInverseMultiplier(amount));
+        _approve(_msgSender(), spender, amount);
         return true;
     }
 
@@ -58,25 +48,13 @@ contract MockRebasingERC20 is ERC20 {
         address recipient,
         uint256 amount
     ) public virtual override returns (bool) {
-        return super.transferFrom(sender, recipient, applyInverseMultiplier(amount));
-    }
+        _transfer(sender, recipient, amount);
 
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        return super.increaseAllowance(spender, applyInverseMultiplier(addedValue));
-    }
+        uint256 currentAllowance = allowance(sender, _msgSender());
+        require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
+        _approve(sender, _msgSender(), currentAllowance - amount);
 
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        return super.decreaseAllowance(spender, applyInverseMultiplier(subtractedValue));
+        return true;
     }
 
     function mint(address account, uint256 amount) public virtual {

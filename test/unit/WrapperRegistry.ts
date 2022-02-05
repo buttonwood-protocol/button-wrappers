@@ -32,12 +32,22 @@ describe('WrapperRegistry', () => {
       .deploy('Wood Bitcoin', 'WOOD-BTC')
     const oracleFactory = await ethers.getContractFactory('MockOracle')
     const mockOracle = await oracleFactory.connect(deployer).deploy()
-    await mockOracle.setData('1000000000000', true);
+    await mockOracle.setData('1000000000000', true)
     const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
     const buttonToken = await buttonTokenFactory.connect(deployer).deploy()
-    buttonToken.initialize(mockBTC.address, 'Button Bitcoin', 'BTN-BTC', mockOracle.address)
+    buttonToken.initialize(
+      mockBTC.address,
+      'Button Bitcoin',
+      'BTN-BTC',
+      mockOracle.address,
+    )
     const buttonToken2 = await buttonTokenFactory.connect(deployer).deploy()
-    buttonToken2.initialize(mockBTC.address, 'Button Bitcoin2', 'BTN-BTC2', mockOracle.address)
+    buttonToken2.initialize(
+      mockBTC.address,
+      'Button Bitcoin2',
+      'BTN-BTC2',
+      mockOracle.address,
+    )
 
     const rebasingErc20Factory = await ethers.getContractFactory(
       'MockRebasingERC20',
@@ -49,14 +59,21 @@ describe('WrapperRegistry', () => {
       10000,
     )
 
-    const unbuttonTokenFactory = await ethers.getContractFactory('UnbuttonToken')
+    const unbuttonTokenFactory = await ethers.getContractFactory(
+      'UnbuttonToken',
+    )
     const unbuttonToken = await unbuttonTokenFactory.deploy()
 
     const initialDeposit = await unbuttonToken.INITIAL_DEPOSIT()
     const initialRate = '1000000'
     await mockAmpl.mint(await deployer.getAddress(), initialDeposit)
     await mockAmpl.approve(unbuttonToken.address, initialDeposit)
-    await unbuttonToken.initialize(mockAmpl.address, 'Unbutton Ampleforth', 'UBTN-AMPL', initialRate)
+    await unbuttonToken.initialize(
+      mockAmpl.address,
+      'Unbutton Ampleforth',
+      'UBTN-AMPL',
+      initialRate,
+    )
 
     return {
       accounts,
@@ -93,11 +110,7 @@ describe('WrapperRegistry', () => {
 
   describe('Simple Updating Wrappers', function () {
     it('Can successfully add a wrapper', async () => {
-      const {
-        wrapperRegistry,
-        mockBTC,
-        buttonToken,
-      } = await setupTestContext()
+      const { wrapperRegistry, mockBTC, buttonToken } = await setupTestContext()
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -117,8 +130,7 @@ describe('WrapperRegistry', () => {
       } = await setupTestContext()
 
       // Adding a config first (so that we can test removing it)
-      await expect(
-        wrapperRegistry.addWrapper(unbuttonToken.address))
+      await expect(wrapperRegistry.addWrapper(unbuttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockAmpl.address, unbuttonToken.address)
       expect(await wrapperRegistry.numWrappers()).to.eq(1)
@@ -159,15 +171,14 @@ describe('WrapperRegistry', () => {
       } = await setupTestContext()
 
       expect(await wrapperRegistry.callStatic.addWrapper(buttonToken.address))
-        .to.be.true;
+        .to.be.true
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
       expect(await wrapperRegistry.callStatic.addWrapper(buttonToken2.address))
-        .to.be.false;
-
+        .to.be.false
     })
 
     it('removeWrapper() has correct return values', async () => {
@@ -183,15 +194,17 @@ describe('WrapperRegistry', () => {
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      expect(await wrapperRegistry.callStatic.removeWrapper(buttonToken.address))
-        .to.be.true;
+      expect(
+        await wrapperRegistry.callStatic.removeWrapper(buttonToken.address),
+      ).to.be.true
 
       await expect(wrapperRegistry.removeWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperRemoved')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      expect(await wrapperRegistry.callStatic.removeWrapper(buttonToken2.address))
-        .to.be.false;
+      expect(
+        await wrapperRegistry.callStatic.removeWrapper(buttonToken2.address),
+      ).to.be.false
     })
 
     it('removeUnderlying() has correct return values', async () => {
@@ -207,15 +220,16 @@ describe('WrapperRegistry', () => {
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockAmpl.address, unbuttonToken.address)
 
-      expect(await wrapperRegistry.callStatic.removeUnderlying(mockAmpl.address))
-        .to.be.true;
+      expect(
+        await wrapperRegistry.callStatic.removeUnderlying(mockAmpl.address),
+      ).to.be.true
 
       await expect(wrapperRegistry.removeUnderlying(mockAmpl.address))
         .to.emit(wrapperRegistry, 'WrapperRemoved')
         .withArgs(mockAmpl.address, unbuttonToken.address)
 
       expect(await wrapperRegistry.callStatic.removeUnderlying(mockBTC.address))
-        .to.be.false;
+        .to.be.false
     })
   })
 
@@ -229,18 +243,19 @@ describe('WrapperRegistry', () => {
       } = await setupTestContext()
 
       // Emits the first time
-      await expect(
-        wrapperRegistry.addWrapper(buttonToken.address))
+      await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
       expect(await wrapperRegistry.numWrappers()).to.eq(1)
 
       // Doesn't emit subsequent times.
       for (let i = 0; i < 5; i++) {
-        await expect(wrapperRegistry.addWrapper(buttonToken.address))
-          .to.not.emit(wrapperRegistry, 'WrapperAdded')
-        await expect(wrapperRegistry.addWrapper(buttonToken2.address))
-          .to.not.emit(wrapperRegistry, 'WrapperAdded')
+        await expect(
+          wrapperRegistry.addWrapper(buttonToken.address),
+        ).to.not.emit(wrapperRegistry, 'WrapperAdded')
+        await expect(
+          wrapperRegistry.addWrapper(buttonToken2.address),
+        ).to.not.emit(wrapperRegistry, 'WrapperAdded')
       }
 
       // Confirming only original wrapper is in registry
@@ -255,14 +270,10 @@ describe('WrapperRegistry', () => {
         wrapperRegistry,
         mockBTC,
         buttonToken,
-        unbuttonToken
+        unbuttonToken,
       } = await setupTestContext()
 
-      await expect(
-        wrapperRegistry.addWrapper(
-          buttonToken.address
-        ),
-      )
+      await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
       expect(await wrapperRegistry.numWrappers()).to.eq(1)
@@ -289,11 +300,7 @@ describe('WrapperRegistry', () => {
         buttonToken,
       } = await setupTestContext()
 
-      await expect(
-        wrapperRegistry.addWrapper(
-          buttonToken.address
-        ),
-      )
+      await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
       expect(await wrapperRegistry.numWrappers()).to.eq(1)
@@ -323,18 +330,19 @@ describe('WrapperRegistry', () => {
         unbuttonToken,
       } = await setupTestContext()
 
-      await expect(
-        wrapperRegistry.addWrapper(buttonToken.address))
+      await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
       await expect(wrapperRegistry.addWrapper(unbuttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockAmpl.address, unbuttonToken.address)
 
-      expect(await wrapperRegistry.getWrapperFromUnderlying(mockBTC.address))
-        .to.eq(buttonToken.address)
-      expect(await wrapperRegistry.getWrapperFromUnderlying(mockAmpl.address))
-        .to.eq(unbuttonToken.address)
+      expect(
+        await wrapperRegistry.getWrapperFromUnderlying(mockBTC.address),
+      ).to.eq(buttonToken.address)
+      expect(
+        await wrapperRegistry.getWrapperFromUnderlying(mockAmpl.address),
+      ).to.eq(unbuttonToken.address)
     })
 
     it('Querying missing underlying returns 0-address', async () => {
@@ -349,8 +357,9 @@ describe('WrapperRegistry', () => {
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockAmpl.address, unbuttonToken.address)
 
-      expect(await wrapperRegistry.getWrapperFromUnderlying(mockBTC.address))
-        .to.eq(ethers.constants.AddressZero)
+      expect(
+        await wrapperRegistry.getWrapperFromUnderlying(mockBTC.address),
+      ).to.eq(ethers.constants.AddressZero)
     })
 
     it('Can successfully query underlying from wrapper', async () => {
@@ -369,10 +378,12 @@ describe('WrapperRegistry', () => {
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockAmpl.address, unbuttonToken.address)
 
-      expect(await wrapperRegistry.getUnderlyingFromWrapper(buttonToken.address))
-        .to.eq(mockBTC.address)
-      expect(await wrapperRegistry.getUnderlyingFromWrapper(unbuttonToken.address))
-        .to.eq(mockAmpl.address)
+      expect(
+        await wrapperRegistry.getUnderlyingFromWrapper(buttonToken.address),
+      ).to.eq(mockBTC.address)
+      expect(
+        await wrapperRegistry.getUnderlyingFromWrapper(unbuttonToken.address),
+      ).to.eq(mockAmpl.address)
     })
 
     it('Querying missing wrapper returns 0-address', async () => {
@@ -387,8 +398,9 @@ describe('WrapperRegistry', () => {
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      expect(await wrapperRegistry.getUnderlyingFromWrapper(buttonToken2.address))
-        .to.eq(ethers.constants.AddressZero)
+      expect(
+        await wrapperRegistry.getUnderlyingFromWrapper(buttonToken2.address),
+      ).to.eq(ethers.constants.AddressZero)
     })
   })
 })

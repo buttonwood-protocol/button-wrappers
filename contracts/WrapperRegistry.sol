@@ -98,8 +98,7 @@ contract WrapperRegistry is IWrapperRegistry, Ownable {
 
     /**
      * @inheritdoc IWrapperRegistry
-     * @dev Retrieves the underlying token by iterating over `underlyingTokens`.
-     * @dev Finds first instance that maps to `wrapperToken` in `_underlyingToWrapperMapping`
+     * @dev Retrieves the underlying token from wrapperToken and returns it if present in registry
      */
     function getUnderlyingFromWrapper(address wrapperToken)
         external
@@ -107,11 +106,12 @@ contract WrapperRegistry is IWrapperRegistry, Ownable {
         override
         returns (address)
     {
-        for (uint256 i = 0; i < numWrappers(); i++) {
-            (address underlying, address wrapper) = wrapperAt(i);
-            if (wrapper == wrapperToken) {
-                return underlying;
-            }
+        address underlyingToken = IButtonWrapper(wrapperToken).underlying();
+        if (
+            _underlyingTokens.contains(underlyingToken) &&
+            _underlyingToWrapperMapping[underlyingToken] == wrapperToken
+        ) {
+            return underlyingToken;
         }
         return address(0);
     }

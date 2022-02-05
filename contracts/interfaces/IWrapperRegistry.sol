@@ -21,18 +21,26 @@ interface IWrapperRegistry {
 
     /**
      * @notice Adds new wrapper to the registry. Emits WrapperAdded on successful add
-     * @param underlyingToken address of the contract for the underlying token
      * @param wrapperToken address of the contract for the wrapper token
      * @return true if the wrapper was added, that is, if it wasn't already present.
      */
-    function addWrapper(address underlyingToken, address wrapperToken) external returns (bool);
+    function addWrapper(address wrapperToken) external returns (bool);
 
     /**
-     * @notice Removes wrapper from the registry. Emits WrapperRemoved on successful remove
+     * @notice Removes wrapper from the registry by looking up wrapper token address.
+     * @notice Emits WrapperRemoved on successful remove
+     * @param wrapperToken address of the contract for the wrapper token
+     * @return true if the wrapper was removed, that is if it was present.
+     */
+    function removeWrapper(address wrapperToken) external returns (bool);
+
+    /**
+     * @notice Removes wrapper from the registry by looking up underlying token address.
+     * @notice Emits WrapperRemoved on successful remove
      * @param underlyingToken address of the contract for the underlying token
      * @return true if the wrapper was removed, that is if it was present.
      */
-    function removeWrapper(address underlyingToken) external returns (bool);
+    function removeUnderlying(address underlyingToken) external returns (bool);
 
     /**
      * @notice The number of wrappers stored in the registry

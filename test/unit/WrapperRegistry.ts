@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import {  Contract, Signer } from 'ethers'
+import { Contract, Signer } from 'ethers'
 import { Fixture, loadFixture } from 'ethereum-waffle'
 import { expect } from 'chai'
 
@@ -90,12 +90,12 @@ describe('WrapperRegistry', () => {
   }
 
   const getFixture = (): Fixture<TestContext> => {
-    return async () => await setupTestContext();
-  };
+    return async () => await setupTestContext()
+  }
 
   describe('Initialization', function () {
     it('Can successfully deploy BondConfigVault with proper arguments', async () => {
-      const { wrapperRegistry } = await loadFixture(getFixture());
+      const { wrapperRegistry } = await loadFixture(getFixture())
       expect(await wrapperRegistry.numWrappers()).to.eq(0)
       await expect(wrapperRegistry.wrapperAt(0)).to.be.reverted
     })
@@ -103,7 +103,9 @@ describe('WrapperRegistry', () => {
 
   describe('Ownership', function () {
     it('Can transfer ownership', async () => {
-      const { wrapperRegistry, deployer, userA } = await loadFixture(getFixture());
+      const { wrapperRegistry, deployer, userA } = await loadFixture(
+        getFixture(),
+      )
       const deployerAddress = await deployer.getAddress()
       const userAAddress = await userA.getAddress()
 
@@ -113,89 +115,131 @@ describe('WrapperRegistry', () => {
     })
 
     it('Only owner can call addWrapper', async () => {
-      const { wrapperRegistry, userA, buttonToken } = await loadFixture(getFixture());
+      const { wrapperRegistry, userA, buttonToken } = await loadFixture(
+        getFixture(),
+      )
 
-      await expect(wrapperRegistry.connect(userA).addWrapper(buttonToken.address))
-        .to.be.reverted
+      await expect(
+        wrapperRegistry.connect(userA).addWrapper(buttonToken.address),
+      ).to.be.reverted
     })
 
     it('Only owner can call removeWrapper', async () => {
-      const { wrapperRegistry, userA, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const {
+        wrapperRegistry,
+        userA,
+        mockBTC,
+        buttonToken,
+      } = await loadFixture(getFixture())
 
       // Adding wrapper to attempt removing
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      await expect(wrapperRegistry.connect(userA).removeWrapper(buttonToken.address))
-        .to.be.reverted
+      await expect(
+        wrapperRegistry.connect(userA).removeWrapper(buttonToken.address),
+      ).to.be.reverted
     })
 
     it('Only owner can call removeUnderlying', async () => {
-      const { wrapperRegistry, userA, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const {
+        wrapperRegistry,
+        userA,
+        mockBTC,
+        buttonToken,
+      } = await loadFixture(getFixture())
 
       // Adding wrapper to attempt removing
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      await expect(wrapperRegistry.connect(userA).removeUnderlying(mockBTC.address))
-        .to.be.reverted
+      await expect(
+        wrapperRegistry.connect(userA).removeUnderlying(mockBTC.address),
+      ).to.be.reverted
     })
 
     it('Non-owner can call numWrappers', async () => {
-      const { wrapperRegistry, userA, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const {
+        wrapperRegistry,
+        userA,
+        mockBTC,
+        buttonToken,
+      } = await loadFixture(getFixture())
 
       // Adding wrapper to populate registry
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
-
 
       expect(await wrapperRegistry.connect(userA).numWrappers()).to.eq(1)
     })
 
     it('Non-owner can call wrapperAt', async () => {
-      const { wrapperRegistry, userA, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const {
+        wrapperRegistry,
+        userA,
+        mockBTC,
+        buttonToken,
+      } = await loadFixture(getFixture())
 
       // Adding wrapper to populate registry
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      const { 0: underlying, 1: wrapper } = await wrapperRegistry.connect(userA).wrapperAt(0)
+      const { 0: underlying, 1: wrapper } = await wrapperRegistry
+        .connect(userA)
+        .wrapperAt(0)
       expect(underlying).to.eq(mockBTC.address)
       expect(wrapper).to.eq(buttonToken.address)
     })
 
     it('Non-owner can call getWrapperFromUnderlying', async () => {
-      const { wrapperRegistry, userA, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const {
+        wrapperRegistry,
+        userA,
+        mockBTC,
+        buttonToken,
+      } = await loadFixture(getFixture())
 
       // Adding wrapper to populate registry
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      const wrapper = await wrapperRegistry.connect(userA).getWrapperFromUnderlying(mockBTC.address)
+      const wrapper = await wrapperRegistry
+        .connect(userA)
+        .getWrapperFromUnderlying(mockBTC.address)
       expect(wrapper).to.eq(buttonToken.address)
     })
 
     it('Non-owner can call getUnderlyingFromWrapper', async () => {
-      const { wrapperRegistry, userA, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const {
+        wrapperRegistry,
+        userA,
+        mockBTC,
+        buttonToken,
+      } = await loadFixture(getFixture())
 
       // Adding wrapper to populate registry
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
         .withArgs(mockBTC.address, buttonToken.address)
 
-      const wrapper = await wrapperRegistry.connect(userA).getUnderlyingFromWrapper(buttonToken.address)
+      const wrapper = await wrapperRegistry
+        .connect(userA)
+        .getUnderlyingFromWrapper(buttonToken.address)
       expect(wrapper).to.eq(mockBTC.address)
     })
   })
 
   describe('Simple Updating Wrappers', function () {
     it('Can successfully add a wrapper', async () => {
-      const { wrapperRegistry, mockBTC, buttonToken } = await loadFixture(getFixture());
+      const { wrapperRegistry, mockBTC, buttonToken } = await loadFixture(
+        getFixture(),
+      )
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -208,11 +252,9 @@ describe('WrapperRegistry', () => {
     })
 
     it('Can successfully remove a wrapper via underlyingToken address', async () => {
-      const {
-        wrapperRegistry,
-        mockAmpl,
-        unbuttonToken,
-      } = await loadFixture(getFixture());
+      const { wrapperRegistry, mockAmpl, unbuttonToken } = await loadFixture(
+        getFixture(),
+      )
 
       // Adding a config first (so that we can test removing it)
       await expect(wrapperRegistry.addWrapper(unbuttonToken.address))
@@ -228,11 +270,9 @@ describe('WrapperRegistry', () => {
     })
 
     it('Can successfully remove a wrapper via wrapperToken address', async () => {
-      const {
-        wrapperRegistry,
-        mockAmpl,
-        unbuttonToken,
-      } = await loadFixture(getFixture());
+      const { wrapperRegistry, mockAmpl, unbuttonToken } = await loadFixture(
+        getFixture(),
+      )
 
       // Adding a config first (so that we can test removing it)
       await expect(wrapperRegistry.addWrapper(unbuttonToken.address))
@@ -253,7 +293,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         buttonToken,
         buttonToken2,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       expect(await wrapperRegistry.callStatic.addWrapper(buttonToken.address))
         .to.be.true
@@ -272,7 +312,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         buttonToken,
         buttonToken2,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       // Adding a config first (so that we can test removing it)
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
@@ -298,7 +338,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         mockAmpl,
         unbuttonToken,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       // Adding a config first (so that we can test removing it)
       await expect(wrapperRegistry.addWrapper(unbuttonToken.address))
@@ -325,7 +365,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         buttonToken,
         buttonToken2,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       // Emits the first time
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
@@ -356,7 +396,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         buttonToken,
         unbuttonToken,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -383,7 +423,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         mockAmpl,
         buttonToken,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -413,7 +453,7 @@ describe('WrapperRegistry', () => {
         mockAmpl,
         buttonToken,
         unbuttonToken,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -436,7 +476,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         mockAmpl,
         unbuttonToken,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       await expect(wrapperRegistry.addWrapper(unbuttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -454,7 +494,7 @@ describe('WrapperRegistry', () => {
         mockAmpl,
         buttonToken,
         unbuttonToken,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')
@@ -477,7 +517,7 @@ describe('WrapperRegistry', () => {
         mockBTC,
         buttonToken,
         buttonToken2,
-      } = await loadFixture(getFixture());
+      } = await loadFixture(getFixture())
 
       await expect(wrapperRegistry.addWrapper(buttonToken.address))
         .to.emit(wrapperRegistry, 'WrapperAdded')

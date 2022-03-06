@@ -22,22 +22,28 @@ yarn test
 ```yaml
 mainnet:
   UnbuttonTokenFactory: "0x75ff649d6119fab43dea5e5e9e02586f27fc8b8f"
-  ButtonTokenFactory: "0xfa5914837f3c225a9e6ae93f9e35d2d85f54adc5"
-
   instances:
     - name: "Unbuttoned AAVE AMPL"
         - symbol: "ubAAMPL"
         - underlying: "0x1e6bb68acec8fefbd87d192be09bb274170a0548"
         - address: "0xF03387d8d0FF326ab586A58E0ab4121d106147DF"
-    - name: "Button ETH"
-        - symbol: "bETH"
-        - underlying: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
-        - address: "0x125c7b36bea62ba3266257521667154446412921"
-    - name: "Button BTC"
-        - symbol: "bBTC"
-        - underlying: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
-        - address: "0x69d4d3629e1aFEE0C4E75B6B345B482979A77112"
 
+avalanche:
+  ButtonTokenFactory: "0x83f6392Aab030043420D184a025e0Cd63f508798"
+    
+  instances:
+    - name: "Button WETH"
+        - symbol: "bWETH"
+        - underlying: "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab"
+        - address: "0x227d7A0e2586A5bFdA7f32aDF066d20D1bfDfDfb"
+    - name: "Button WAVAX"
+        - symbol: "bWAVAX"
+        - underlying: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7"
+        - address: "0x9f61aE42c01698aC35AedeF651B0FE5E407bC6A0"
+    - name: "Button WBTC"
+        - symbol: "bWBTC"
+        - underlying: "0x50b7545627a5162f82a992c33b87adc75187b218"
+        - address: "0x9bFE32D18e66ffAF6dcB0306AE7D24F768469f91"
 ```
 
 ## Contribute

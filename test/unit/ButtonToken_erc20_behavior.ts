@@ -276,6 +276,79 @@ describe('ButtonToken:ERC20:transferFrom', () => {
       })
     })
   })
+
+  describe('when the spender has made an infinite approval balance', function () {
+    describe('when the owner does NOT have enough balance', function () {
+      it('should fail', async function () {
+        await token
+          .connect(owner)
+          .approve(await anotherAccount.getAddress(), overdraftAmount)
+        await expect(
+          token
+            .connect(anotherAccount)
+            .transferFrom(
+              await owner.getAddress(),
+              await recipient.getAddress(),
+              overdraftAmount,
+            ),
+        ).to.be.reverted
+      })
+    })
+
+    describe('when the owner has enough balance', function () {
+      let prevSenderBalance: BigNumber
+      let prevRecipientBalance: BigNumber
+      before(async function () {
+        prevSenderBalance = await token.balanceOf(await owner.getAddress())
+        prevRecipientBalance = await token.balanceOf(
+          await recipient.getAddress(),
+        )
+        await token
+          .connect(owner)
+          .approve(
+            await anotherAccount.getAddress(),
+            ethers.constants.MaxUint256,
+          )
+      })
+
+      it('emits a transfer and but no approval event', async function () {
+        await expect(
+          token
+            .connect(anotherAccount)
+            .transferFrom(
+              await owner.getAddress(),
+              await recipient.getAddress(),
+              transferAmount,
+            ),
+        )
+          .to.emit(token, 'Transfer')
+          .withArgs(
+            await owner.getAddress(),
+            await recipient.getAddress(),
+            transferAmount,
+          )
+          .to.not.emit(token, 'Approval')
+      })
+
+      it('transfers the requested amount', async function () {
+        const senderBalance = await token.balanceOf(await owner.getAddress())
+        const recipientBalance = await token.balanceOf(
+          await recipient.getAddress(),
+        )
+        expect(prevSenderBalance.sub(senderBalance)).to.eq(transferAmount)
+        expect(recipientBalance.sub(prevRecipientBalance)).to.eq(transferAmount)
+      })
+
+      it('does NOT decrease the spender allowance', async function () {
+        expect(
+          await token.allowance(
+            await owner.getAddress(),
+            await anotherAccount.getAddress(),
+          ),
+        ).to.eq(ethers.constants.MaxUint256)
+      })
+    })
+  })
 })
 
 describe('ButtonToken:ERC20:approve', () => {

@@ -291,8 +291,10 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         address to,
         uint256 amount
     ) external override validRecipient(to) onAfterRebase returns (bool) {
-        _allowances[from][_msgSender()] -= amount;
-        emit Approval(from, _msgSender(), _allowances[from][_msgSender()]);
+        if (_allowances[from][_msgSender()] != type(uint256).max) {
+            _allowances[from][_msgSender()] -= amount;
+            emit Approval(from, _msgSender(), _allowances[from][_msgSender()]);
+        }
 
         _transfer(from, to, _amountToBits(amount, lastPrice), amount);
         return true;
@@ -309,8 +311,10 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         uint256 bits = _accountBits[from];
         uint256 amount = _bitsToAmount(bits, lastPrice);
 
-        _allowances[from][_msgSender()] -= amount;
-        emit Approval(from, _msgSender(), _allowances[from][_msgSender()]);
+        if (_allowances[from][_msgSender()] != type(uint256).max) {
+            _allowances[from][_msgSender()] -= amount;
+            emit Approval(from, _msgSender(), _allowances[from][_msgSender()]);
+        }
 
         _transfer(from, to, bits, amount);
         return true;

@@ -289,4 +289,71 @@ describe('Button:Elastic:transferAllFrom', () => {
       ).to.eq('99')
     })
   })
+
+  describe('when the spender has enough approved infinite balance', function () {
+    it('emits a transfer event', async function () {
+      const senderBalance = await token.balanceOf(await owner.getAddress())
+      await token
+        .connect(owner)
+        .approve(await anotherAccount.getAddress(), ethers.constants.MaxUint256)
+
+      await expect(
+        token
+          .connect(anotherAccount)
+          .transferAllFrom(
+            await owner.getAddress(),
+            await recipient.getAddress(),
+          ),
+      )
+        .to.emit(token, 'Transfer')
+        .withArgs(
+          await owner.getAddress(),
+          await recipient.getAddress(),
+          senderBalance,
+        )
+    })
+
+    it('transfers the requested amount', async function () {
+      const senderBalance = await token.balanceOf(await owner.getAddress())
+      const recipientBalance = await token.balanceOf(
+        await recipient.getAddress(),
+      )
+
+      await token
+        .connect(owner)
+        .approve(await anotherAccount.getAddress(), ethers.constants.MaxUint256)
+
+      await token
+        .connect(anotherAccount)
+        .transferAllFrom(await owner.getAddress(), await recipient.getAddress())
+
+      const senderBalance_ = await token.balanceOf(await owner.getAddress())
+      const recipientBalance_ = await token.balanceOf(
+        await recipient.getAddress(),
+      )
+      expect(senderBalance_).to.eq('0')
+      expect(recipientBalance_.sub(recipientBalance)).to.eq(senderBalance)
+    })
+
+    it('does NOT decrease the spender allowance', async function () {
+      const senderBalance = await token.balanceOf(await owner.getAddress())
+      await token
+        .connect(owner)
+        .approve(await anotherAccount.getAddress(), ethers.constants.MaxUint256)
+      await expect(
+        token
+          .connect(anotherAccount)
+          .transferAllFrom(
+            await owner.getAddress(),
+            await recipient.getAddress(),
+          ),
+      ).not.to.emit(token, 'Approval')
+      expect(
+        await token.allowance(
+          await owner.getAddress(),
+          await anotherAccount.getAddress(),
+        ),
+      ).to.eq(ethers.constants.MaxUint256)
+    })
+  })
 })

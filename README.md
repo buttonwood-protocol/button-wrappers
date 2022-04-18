@@ -21,6 +21,17 @@ yarn test
 
 ```yaml
 mainnet:
+  ButtonTokenFactory: "0x84D0F1Cd873122F2A87673e079ea69cd80b51960"
+  instances:
+    - name: "Button WETH"
+        - symbol: "bWETH"
+        - underlying: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        - address: "0x8f471e1896d16481678db553f86283eab1561b02"
+    - name: "Button WBTC"
+        - symbol: "bWBTC"
+        - underlying: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+        - address: "0x8e8212386d580d8dd731a2b1a36a43935250304e"
+        
   UnbuttonTokenFactory: "0x75ff649d6119fab43dea5e5e9e02586f27fc8b8f"
   instances:
     - name: "Unbuttoned AAVE AMPL"

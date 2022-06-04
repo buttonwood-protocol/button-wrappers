@@ -23,14 +23,10 @@ async function mockedOracle() {
   )
     .connect(deployer)
     .deploy(8)
-  const mockAmpl = await (
-    await ethers.getContractFactory('MockAMPL')
-  )
+  const mockAmpl = await (await ethers.getContractFactory('MockAMPL'))
     .connect(deployer)
     .deploy(9)
-  const mockWampl = await (
-    await ethers.getContractFactory('MockWAMPL')
-  )
+  const mockWampl = await (await ethers.getContractFactory('MockWAMPL'))
     .connect(deployer)
     .deploy(18, mockAmpl.address)
   // deploy contract to test
@@ -54,7 +50,7 @@ async function mockedOracle() {
   }
 }
 
-describe('WamplOracle', function() {
+describe('WamplOracle', function () {
   before('setup Orchestrator contract', async () => {
     ;({
       deployer,
@@ -67,27 +63,27 @@ describe('WamplOracle', function() {
     } = await waffle.loadFixture(mockedOracle))
   })
 
-  describe('when sent ether', async function() {
-    it('should reject', async function() {
-      await expect(user.sendTransaction({ to: oracle.address, value: 1 }))
-        .to.be.reverted
+  describe('when sent ether', async function () {
+    it('should reject', async function () {
+      await expect(user.sendTransaction({ to: oracle.address, value: 1 })).to.be
+        .reverted
     })
   })
 
-  describe('Fetching data', async function() {
-    it('should succeed with fresh data', async function() {
+  describe('Fetching data', async function () {
+    it('should succeed with fresh data', async function () {
       // Set AMPL to be worth 0.0005 ETH
       await expect(
-        mockAmplEthAggregator.connect(user)
+        mockAmplEthAggregator
+          .connect(user)
           .setLatestAnswer(BigNumber.from('500000000000000')),
-      )
-        .to.not.be.reverted
+      ).to.not.be.reverted
       // Set ETH to be worth 2000 USD
       await expect(
-        mockEthUsdAggregator.connect(user)
+        mockEthUsdAggregator
+          .connect(user)
           .setLatestAnswer(BigNumber.from('200000000000')),
-      )
-        .to.not.be.reverted
+      ).to.not.be.reverted
       await expect(
         mockAmplEthAggregator
           .connect(user)
@@ -108,19 +104,19 @@ describe('WamplOracle', function() {
       expect(success).to.eq(true)
     })
 
-    it('should fail with stale data', async function() {
+    it('should fail with stale data', async function () {
       // Set AMPL to be worth 0.0005 ETH
       await expect(
-        mockAmplEthAggregator.connect(user)
+        mockAmplEthAggregator
+          .connect(user)
           .setLatestAnswer(BigNumber.from('500000000000000')),
-      )
-        .to.not.be.reverted
+      ).to.not.be.reverted
       // Set ETH to be worth 2000 USD
       await expect(
-        mockEthUsdAggregator.connect(user)
+        mockEthUsdAggregator
+          .connect(user)
           .setLatestAnswer(BigNumber.from('200000000000')),
-      )
-        .to.not.be.reverted
+      ).to.not.be.reverted
       await expect(
         mockAmplEthAggregator
           .connect(user)

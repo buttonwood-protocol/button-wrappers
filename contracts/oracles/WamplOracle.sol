@@ -54,9 +54,8 @@ contract WamplOracle is IOracle {
         uint256 amplEthDiff = block.timestamp - amplEthUpdatedAt;
         uint256 ethUsdDiff = block.timestamp - ethUsdUpdatedAt;
         uint256 amplUsd = uint256(amplEth) * uint256(ethUsd);
-        int256 convertPriceByDecimals = int256(amplEthOracleDecimals) +
-            int256(ethUsdOracleDecimals) -
-            int256(PRICE_DECIMALS);
+        int256 convertPriceByDecimals =
+            int256(amplEthOracleDecimals) + int256(ethUsdOracleDecimals) - int256(PRICE_DECIMALS);
         if (convertPriceByDecimals > 0) {
             amplUsd = amplUsd / (10**uint256(convertPriceByDecimals));
         } else if (convertPriceByDecimals < 0) {

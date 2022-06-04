@@ -11,6 +11,11 @@ import "../interfaces/IChainlinkAggregator.sol";
 contract MockChainlinkAggregator is IChainlinkAggregator {
     uint256 public answer;
     uint256 public updatedAt;
+    uint8 public immutable override decimals;
+
+    constructor(uint8 _decimals) {
+        decimals = _decimals;
+    }
 
     /**
      * Get the latest answer from the oracle

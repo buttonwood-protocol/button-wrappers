@@ -15,7 +15,7 @@ async function mockedOracle() {
     await ethers.getContractFactory('MockChainlinkAggregator')
   )
     .connect(deployer)
-    .deploy()
+    .deploy(8)
   const oracle = await (await ethers.getContractFactory('ChainlinkOracle'))
     .connect(deployer)
     .deploy(mockAggregator.address, 60000)

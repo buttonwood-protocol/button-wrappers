@@ -16,31 +16,29 @@ contract WamplOracle is IOracle {
     uint256 public constant PRICE_DECIMALS = 8;
     // The address of the Chainlink Aggregator contract
     IChainlinkAggregator public immutable amplEthOracle;
-    uint256 public immutable amplEthOracleDecimals;
     IChainlinkAggregator public immutable ethUsdOracle;
-    uint256 public immutable ethUsdOracleDecimals;
     IWAMPL public immutable wampl;
-    uint256 public immutable unitAmpl;
-    uint256 public immutable unitWampl;
     uint256 public immutable stalenessThresholdSecs;
+    uint256 public immutable amplDecimals;
+    uint256 public immutable wamplDecimals;
+    int256 public immutable convertPriceByDecimals;
 
     constructor(
-        address _amplEthOracle,
-        address _ethUsdOracle,
-        address _wampl,
+        IChainlinkAggregator _amplEthOracle,
+        IChainlinkAggregator _ethUsdOracle,
+        IWAMPL _wampl,
         uint256 _stalenessThresholdSecs
     ) {
-        IChainlinkAggregator __amplEthOracle = IChainlinkAggregator(_amplEthOracle);
-        amplEthOracle = __amplEthOracle;
-        amplEthOracleDecimals = uint256(__amplEthOracle.decimals());
-        IChainlinkAggregator __ethUsdOracle = IChainlinkAggregator(_ethUsdOracle);
-        ethUsdOracle = __ethUsdOracle;
-        ethUsdOracleDecimals = uint256(__ethUsdOracle.decimals());
-        IWAMPL __wampl = IWAMPL(_wampl);
-        wampl = __wampl;
-        unitAmpl = 10**uint256(IERC20Metadata(__wampl.underlying()).decimals());
-        unitWampl = 10**uint256(__wampl.decimals());
+        amplEthOracle = _amplEthOracle;
+        ethUsdOracle = _ethUsdOracle;
+        wampl = _wampl;
         stalenessThresholdSecs = _stalenessThresholdSecs;
+        amplDecimals = uint256(IERC20Metadata(_wampl.underlying()).decimals());
+        wamplDecimals = uint256(_wampl.decimals());
+        convertPriceByDecimals =
+            int256(uint256(_amplEthOracle.decimals())) +
+            int256(uint256(_ethUsdOracle.decimals())) -
+            int256(PRICE_DECIMALS);
     }
 
     /**
@@ -54,15 +52,13 @@ contract WamplOracle is IOracle {
         uint256 amplEthDiff = block.timestamp - amplEthUpdatedAt;
         uint256 ethUsdDiff = block.timestamp - ethUsdUpdatedAt;
         uint256 amplUsd = uint256(amplEth) * uint256(ethUsd);
-        int256 convertPriceByDecimals =
-            int256(amplEthOracleDecimals) + int256(ethUsdOracleDecimals) - int256(PRICE_DECIMALS);
         if (convertPriceByDecimals > 0) {
             amplUsd = amplUsd / (10**uint256(convertPriceByDecimals));
         } else if (convertPriceByDecimals < 0) {
             amplUsd = amplUsd * (10**uint256(-convertPriceByDecimals));
         }
-        uint256 amplPerWampl = wampl.wrapperToUnderlying(unitWampl);
-        uint256 wamplUsd = (amplUsd * amplPerWampl) / unitAmpl;
+        uint256 amplPerWampl = wampl.wrapperToUnderlying(10**wamplDecimals);
+        uint256 wamplUsd = (amplUsd * amplPerWampl) / (10**amplDecimals);
         return (
             wamplUsd,
             amplEthDiff <= stalenessThresholdSecs && ethUsdDiff <= stalenessThresholdSecs

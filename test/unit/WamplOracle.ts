@@ -31,7 +31,9 @@ async function mockedOracle() {
       60000,
     )
   // need a contract with a non-view method that calls oracle.getData so we can gas test
-  const mockOracleDataFetcher = await (await ethers.getContractFactory('MockOracleDataFetcher'))
+  const mockOracleDataFetcher = await (
+    await ethers.getContractFactory('MockOracleDataFetcher')
+  )
     .connect(deployer)
     .deploy(oracle.address)
 
@@ -47,20 +49,17 @@ async function mockedOracle() {
   }
 }
 
-describe('WamplOracle', function() {
-  describe('when sent ether', async function() {
-    it('should reject', async function() {
-      const {
-        user,
-        oracle,
-      } = await waffle.loadFixture(mockedOracle)
-      await expect(user.sendTransaction({ to: oracle.address, value: 1 }))
-        .to.be.reverted
+describe('WamplOracle', function () {
+  describe('when sent ether', async function () {
+    it('should reject', async function () {
+      const { user, oracle } = await waffle.loadFixture(mockedOracle)
+      await expect(user.sendTransaction({ to: oracle.address, value: 1 })).to.be
+        .reverted
     })
   })
 
-  describe('Fetching data', async function() {
-    it('should succeed with fresh data', async function() {
+  describe('Fetching data', async function () {
+    it('should succeed with fresh data', async function () {
       const {
         user,
         mockAmplEthAggregator,
@@ -103,7 +102,7 @@ describe('WamplOracle', function() {
       expect(receipt.gasUsed.toString()).to.equal('95823')
     })
 
-    it('should fail with stale data', async function() {
+    it('should fail with stale data', async function () {
       const {
         user,
         mockAmplEthAggregator,
@@ -143,7 +142,7 @@ describe('WamplOracle', function() {
       expect(receipt.gasUsed.toString()).to.equal('75909')
     })
 
-    it('handles different AMPL<->WAMPL conversion rates', async function() {
+    it('handles different AMPL<->WAMPL conversion rates', async function () {
       const {
         user,
         mockAmplEthAggregator,
@@ -175,9 +174,7 @@ describe('WamplOracle', function() {
           .setUpdatedAt(Math.floor(new Date().valueOf() / 1000)),
       ).to.not.be.reverted
       await expect(
-        mockWampl
-          .connect(user)
-          .setTotalAMPLSupply('59291643044413257999'),
+        mockWampl.connect(user).setTotalAMPLSupply('59291643044413257999'),
       ).to.not.be.reverted
 
       const tx = await mockOracleDataFetcher.connect(user).fetch()
@@ -192,7 +189,7 @@ describe('WamplOracle', function() {
       expect(receipt.gasUsed.toString()).to.equal('95823')
     })
 
-    it('handles extreme oracle values', async function() {
+    it('handles extreme oracle values', async function () {
       const {
         user,
         mockAmplEthAggregator,
@@ -241,9 +238,7 @@ describe('WamplOracle', function() {
       ).to.not.be.reverted
       // Set ETH to be worth 1e-8 USD
       await expect(
-        mockEthUsdAggregator
-          .connect(user)
-          .setLatestAnswer(BigNumber.from('1')),
+        mockEthUsdAggregator.connect(user).setLatestAnswer(BigNumber.from('1')),
       ).to.not.be.reverted
 
       const tx2 = await mockOracleDataFetcher.connect(user).fetch()
@@ -258,11 +253,8 @@ describe('WamplOracle', function() {
     })
   })
 
-  it('behaves correctly with negative convertPriceByDecimals', async function() {
-    const {
-      deployer,
-      user,
-    } = await waffle.loadFixture(mockedOracle)
+  it('behaves correctly with negative convertPriceByDecimals', async function () {
+    const { deployer, user } = await waffle.loadFixture(mockedOracle)
 
     // deploy fresh mocks with different configurations
     const mockAmplEthAggregator = await (
@@ -291,15 +283,15 @@ describe('WamplOracle', function() {
         60000,
       )
     // need a contract with a non-view method that calls oracle.getData so we can gas test
-    const mockOracleDataFetcher = await (await ethers.getContractFactory('MockOracleDataFetcher'))
+    const mockOracleDataFetcher = await (
+      await ethers.getContractFactory('MockOracleDataFetcher')
+    )
       .connect(deployer)
       .deploy(oracle.address)
 
     // Set AMPL to be worth 0.0005 ETH
     await expect(
-      mockAmplEthAggregator
-        .connect(user)
-        .setLatestAnswer(BigNumber.from('5')),
+      mockAmplEthAggregator.connect(user).setLatestAnswer(BigNumber.from('5')),
     ).to.not.be.reverted
     // Set ETH to be worth 2000 USD
     await expect(

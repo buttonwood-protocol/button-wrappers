@@ -1,6 +1,5 @@
 import { ethers, waffle } from 'hardhat'
 import { Contract, Signer } from 'ethers'
-import { increaseTime } from '../utils/utils'
 import { expect } from 'chai'
 import { TransactionResponse } from '@ethersproject/providers'
 
@@ -15,7 +14,7 @@ async function mockedOracle() {
     await ethers.getContractFactory('MockChainlinkAggregator')
   )
     .connect(deployer)
-    .deploy()
+    .deploy(8)
   const oracle = await (await ethers.getContractFactory('ChainlinkOracle'))
     .connect(deployer)
     .deploy(mockAggregator.address, 60000)
@@ -66,12 +65,14 @@ describe('ChainlinkOracle', function () {
 
       // we use an oracle fetcher contract because, since the IOracle
       // interface getData function is writable, we can't fetch the response directly
-      await oracleFetcher.connect(user).fetch()
-
+      const tx = await oracleFetcher.connect(user).fetch()
+      const receipt = await tx.wait()
       const [res, success] = await oracleFetcher.getData()
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(true)
+      expect(receipt.gasUsed.toString()).to.equal('78838')
+      expect(receipt.gasUsed.toString()).to.equal('78838')
     })
 
     it('should fail with stale data', async function () {
@@ -85,12 +86,13 @@ describe('ChainlinkOracle', function () {
           .setUpdatedAt(Math.floor(new Date().valueOf() / 1000) - 100000),
       ).to.not.be.reverted
 
-      await oracleFetcher.connect(user).fetch()
-
+      const tx = await oracleFetcher.connect(user).fetch()
+      const receipt = await tx.wait()
       const [res, success] = await oracleFetcher.getData()
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(false)
+      expect(receipt.gasUsed.toString()).to.equal('26838')
     })
   })
 })

@@ -1,13 +1,13 @@
+import './test/utils/loadDotEnv'
 import { HardhatUserConfig } from 'hardhat/config'
 import { Wallet } from 'ethers'
-
 import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 import '@nomiclabs/hardhat-etherscan'
 import 'solidity-coverage'
 import 'hardhat-gas-reporter'
-import './tasks/deployers'
+import './tasks'
 
 const DEFAULT_MNEMONIC = Wallet.createRandom().mnemonic.phrase
 
@@ -24,9 +24,11 @@ export default {
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_SECRET}`,
-      accounts: {
-        mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
-      },
+      accounts: process.env.DEV_PKEY
+        ? [process.env.DEV_PKEY]
+        : {
+            mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+          },
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_SECRET}`,

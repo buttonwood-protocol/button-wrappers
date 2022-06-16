@@ -18,9 +18,11 @@ export default {
   networks: {
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/${process.env.INFURA_SECRET}`,
-      accounts: {
-        mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
-      },
+      accounts: process.env.DEV_PKEY
+        ? [process.env.DEV_PKEY]
+        : {
+            mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+          },
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_SECRET}`,
@@ -32,9 +34,11 @@ export default {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_SECRET}`,
-      accounts: {
-        mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
-      },
+      accounts: process.env.PROD_PKEY
+        ? [process.env.PROD_PKEY]
+        : {
+            mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
+          },
     },
   },
   solidity: {

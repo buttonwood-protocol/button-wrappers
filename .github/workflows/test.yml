@@ -3,8 +3,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-# This workflow will install Deno and run tests across stable and nightly builds on Windows, Ubuntu and macOS.
-# For more information see: https://github.com/denolib/setup-deno
+# This workflow will install node.js and run tests across stable and nightly builds on Windows, Ubuntu and macOS.
 
 name: Test
 
@@ -20,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.x]
+        node-version: [14.x]
         os: [macOS-latest, windows-latest, ubuntu-latest]
 
     steps:
@@ -30,7 +29,7 @@ jobs:
       - name: Uses node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node-version }} # tests across multiple Deno versions
+          node-version: ${{ matrix.node-version }} # tests across multiple node.js versions
 
       - name: Install
         run: yarn install

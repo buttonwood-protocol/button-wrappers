@@ -17,7 +17,7 @@ export default {
   },
   networks: {
     rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${process.env.INFURA_SECRET}`,
+      url: `https://rinkeby.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       accounts: process.env.DEV_PKEY
         ? [process.env.DEV_PKEY]
         : {
@@ -25,7 +25,7 @@ export default {
           },
     },
     kovan: {
-      url: `https://kovan.infura.io/v3/${process.env.INFURA_SECRET}`,
+      url: `https://kovan.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       accounts: process.env.DEV_PKEY
         ? [process.env.DEV_PKEY]
         : {
@@ -33,7 +33,7 @@ export default {
           },
     },
     mainnet: {
-      url: `https://mainnet.infura.io/v3/${process.env.INFURA_SECRET}`,
+      url: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       accounts: process.env.PROD_PKEY
         ? [process.env.PROD_PKEY]
         : {

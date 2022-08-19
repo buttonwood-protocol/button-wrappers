@@ -57,6 +57,11 @@ avalanche:
         - address: "0x9bFE32D18e66ffAF6dcB0306AE7D24F768469f91"
 ```
 
+## Example script usage
+
+### Verifying ChainlinkOracle contract
+`yarn hardhat verify:ChainlinkOracle --network kovan --address 0x29636cE5b252a0F3C088BA1A70Bf936AA00ce7D4 --aggregator 0x6135b13325bfC4B00278B4abC5e20bbce2D6580e --staleness-threshold-secs 0x15180`
+
 ## Contribute
 
 To report bugs within this package, create an issue in this repository.

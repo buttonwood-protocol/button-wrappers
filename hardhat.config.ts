@@ -32,6 +32,14 @@ export default {
             mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
           },
     },
+    goerli: {
+      url: `https://goerli.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+      accounts: process.env.DEV_PKEY
+        ? [process.env.DEV_PKEY]
+        : {
+            mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+          },
+    },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       accounts: process.env.PROD_PKEY

@@ -21,7 +21,7 @@ task('deploy:MockERC20')
     } catch (e) {
       console.log('Unable to verify on etherscan', e);
     }
-})
+});
 
 task('verify:MockERC20', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
@@ -34,4 +34,4 @@ task('verify:MockERC20', 'Verifies on etherscan')
       address,
       constructorArguments: [name, symbol],
     })
-})
+});

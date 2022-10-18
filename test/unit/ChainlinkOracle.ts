@@ -35,13 +35,8 @@ async function mockedOracle() {
 
 describe('ChainlinkOracle', function () {
   before('setup Orchestrator contract', async () => {
-    ;({
-      deployer,
-      user,
-      oracle,
-      oracleFetcher,
-      mockAggregator,
-    } = await waffle.loadFixture(mockedOracle))
+    ;({ deployer, user, oracle, oracleFetcher, mockAggregator } =
+      await waffle.loadFixture(mockedOracle))
   })
 
   describe('when sent ether', async function () {

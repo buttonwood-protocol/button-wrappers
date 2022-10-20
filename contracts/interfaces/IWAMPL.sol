@@ -12,11 +12,20 @@ interface IWAMPL is IERC20 {
     /// @return The amount of wAMPLs minted.
     function deposit(uint256 amples) external returns (uint256);
 
-    /// @notice Burns wAMPLs from {msg.sender} and transfers AMPLs back.
+    /// @notice Burns wAMPLs from {msg.sender} and transfers AMPLs back,
+    ///         to the specified beneficiary.
     ///
+    /// @param to The beneficiary wallet.
     /// @param wamples The amount of wAMPLs to burn.
     /// @return The amount of AMPLs withdrawn.
-    function burn(uint256 wamples) external returns (uint256);
+    function burnTo(address to, uint256 wamples) external returns (uint256);
+
+    /// @notice Burns all wAMPLs from {msg.sender} and transfers AMPLs back,
+    ///         to the specified beneficiary.
+    ///
+    /// @param to The beneficiary wallet.
+    /// @return The amount of AMPLs withdrawn.
+    function burnAllTo(address to) external returns (uint256);
 
     /// @return The address of the underlying "wrapped" token ie) AMPL.
     function underlying() external view returns (address);

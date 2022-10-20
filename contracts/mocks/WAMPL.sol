@@ -45,6 +45,20 @@ contract WAMPL {
         return withdraw(wamples);
     }
 
+    function burnTo(address to, uint256 wamples) external returns (uint256) {
+        require(balanceOf[msg.sender] >= wamples, "Insufficient balance");
+        balanceOf[msg.sender] -= wamples;
+        SafeERC20.safeTransfer(IERC20(ampl), to, wamples);
+        return wamples;
+    }
+
+    function burnAllTo(address to) external returns (uint256) {
+        uint256 wamples = balanceOf[msg.sender];
+        balanceOf[msg.sender] = 0;
+        SafeERC20.safeTransfer(IERC20(ampl), to, wamples);
+        return wamples;
+    }
+
     function totalSupply() public view returns (uint256) {
         return IERC20(ampl).balanceOf(address(this));
     }

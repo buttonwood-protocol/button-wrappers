@@ -6,7 +6,6 @@ import "./interfaces/IButtonWrapper.sol";
 import "./interfaces/IWAMPL.sol";
 import "./interfaces/IButtonToken.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "hardhat/console.sol";
 
 /**
  * @dev Router to automatically wrap AMPL into WAMPL for ButtonToken actions
@@ -24,6 +23,8 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
 
     constructor(address _wampl) {
         wampl = IWAMPL(_wampl);
+        // Pre-approving contract's AMPL balance to be used by WAMPL contract
+        IERC20(IWAMPL(_wampl).underlying()).safeApprove(_wampl, type(uint256).max);
     }
 
     /**
@@ -46,8 +47,7 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
         if (buttonToken.underlying() != address(wampl)) revert InvalidButtonAsset();
         // Transfer ampl to router
         IERC20(wampl.underlying()).transferFrom(msg.sender, address(this), amplAmount);
-        // Approve ampl from router to wampl
-        IERC20(wampl.underlying()).safeApprove(address(wampl), amplAmount);
+        // Router's ampl balance is already approved to WAMPL contract by constructor
         // Depositing ampl for wampl
         uint256 wamplAmount = wampl.deposit(amplAmount);
         // Approving wampl to buttonToken contract
@@ -73,11 +73,8 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
         buttonToken.transferFrom(msg.sender, address(this), amount);
         // Burn buttonToken to wampl
         buttonToken.burn(amount);
-        // Burn wampl to ampl
-        uint256 amplAmount = wampl.burn(wampl.balanceOf(address(this)));
-        // Transfer ampl to user
-        IERC20(wampl.underlying()).safeTransfer(msg.sender, amplAmount);
-        return amplAmount;
+        // Burn wampl to ampl, directly send to user
+        return wampl.burnTo(msg.sender, wampl.balanceOf(address(this)));
     }
 
     /**
@@ -96,10 +93,7 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
         buttonToken.transferAllFrom(msg.sender, address(this));
         // Burn all buttonToken to wampl
         IButtonWrapper(buttonToken).burnAll();
-        // Burn wampl to ampl
-        uint256 amplAmount = wampl.burn(wampl.balanceOf(address(this)));
-        // Transfer ampl to user
-        IERC20(wampl.underlying()).safeTransfer(msg.sender, amplAmount);
-        return amplAmount;
+        // Burn wampl to ampl, directly send to user
+        return wampl.burnAllTo(msg.sender);
     }
 }

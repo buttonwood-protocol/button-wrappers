@@ -37,7 +37,7 @@
     "@types/node": "^14.6.1",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
-    "ethereum-waffle": "^3.2.1",
+    "ethereum-waffle": "^4.0.7",
     "ethereumjs-util": "^7.0.7",
     "ethers": "5.1.4",
     "hardhat": "^2.12.0",

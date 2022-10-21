@@ -126,7 +126,7 @@ describe('ButtonTokenWamplRouter', () => {
     const depositAmount = ethers.utils.parseUnits('0', 9)
     await expect(
       router.wamplWrapAndDeposit(buttonToken.address, depositAmount),
-    ).to.be.revertedWith('ZeroAmount()')
+    ).to.be.revertedWith('ZeroAmount')
 
     expect(await ampl.balanceOf(router.address)).to.equal('0')
     expect(await buttonToken.balanceOf(router.address)).to.equal('0')
@@ -149,7 +149,7 @@ describe('ButtonTokenWamplRouter', () => {
     const depositAmount = ethers.utils.parseUnits('10', 9)
     await expect(
       router.wamplWrapAndDeposit(invalidButtonToken.address, depositAmount),
-    ).to.be.revertedWith('InvalidButtonAsset()')
+    ).to.be.revertedWith('InvalidButtonAsset')
 
     expect(await ampl.balanceOf(router.address)).to.equal('0')
     expect(await invalidButtonToken.balanceOf(router.address)).to.equal('0')

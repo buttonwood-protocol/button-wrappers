@@ -2,7 +2,9 @@ pragma solidity 0.8.4;
 
 import {IButtonWrapper} from "./interfaces/IButtonWrapper.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+// solhint-disable-next-line max-line-length
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+// solhint-disable-next-line max-line-length
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
 
 /**

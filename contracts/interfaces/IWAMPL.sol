@@ -3,7 +3,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Interface definition for WAMPL contract, A fixed-balance ERC-20 wrapper for the AMPL rebasing token.
 interface IWAMPL is IERC20 {
-    
     function decimals() external view returns (uint8);
 
     /// @notice Transfers AMPLs from {msg.sender} and mints wAMPLs.

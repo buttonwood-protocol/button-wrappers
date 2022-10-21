@@ -80,6 +80,7 @@ describe('ButtonTokenWamplRouter', () => {
     const userAddress = await user.getAddress()
 
     const depositAmount = ethers.utils.parseUnits('5', 9)
+    const wamplAmount = depositAmount.mul(BigNumber.from(10).pow(9)).div(5);
     await ampl.connect(user).approve(router.address, depositAmount)
 
     await expect(router.wamplWrapAndDeposit(buttonToken.address, depositAmount))
@@ -92,28 +93,25 @@ describe('ButtonTokenWamplRouter', () => {
       // 3. Router transfers AMPL to WAMPL contract
       .to.emit(ampl, 'Transfer')
       .withArgs(router.address, wampl.address, depositAmount)
-      // 4. WAMPL contract deposits AMPL
-      .to.emit(wampl, 'Deposit')
-      .withArgs(router.address, depositAmount)
-      // 5. WAMPL contract mints (transfers) WAMPL balance to router (from 0-address)
+      // 4. WAMPL contract mints (transfers) WAMPL balance to router (from 0-address)
       .to.emit(wampl, 'Transfer')
-      .withArgs(ethers.constants.AddressZero, router.address, depositAmount)
-      // 6. Router approves wampl to buttonToken contract
+      .withArgs(ethers.constants.AddressZero, router.address, wamplAmount)
+      // 5. Router approves wampl to buttonToken contract
       .to.emit(wampl, 'Approval')
-      .withArgs(router.address, buttonToken.address, depositAmount)
-      // 7. Router transfers wampl to buttonToken contract
+      .withArgs(router.address, buttonToken.address, wamplAmount)
+      // 6. Router transfers wampl to buttonToken contract
       .to.emit(wampl, 'Transfer')
-      .withArgs(router.address, buttonToken, depositAmount)
-      // 8. buttonToken contract mints (transfers) buttonToken balance to user (from 0-address)
+      .withArgs(router.address, buttonToken, wamplAmount)
+      // 7. buttonToken contract mints (transfers) buttonToken balance to user (from 0-address)
       .to.emit(buttonToken, 'Transfer')
       .withArgs(
         ethers.constants.AddressZero,
         userAddress,
-        depositAmount.mul('10000'),
+        wamplAmount.mul('10000'),
       )
 
     expect(await buttonToken.balanceOf(await user.getAddress())).to.equal(
-      depositAmount.mul('10000'),
+      wamplAmount.mul('10000'),
     )
 
     expect(await wampl.balanceOf(router.address)).to.equal('0')
@@ -172,12 +170,12 @@ describe('ButtonTokenWamplRouter', () => {
     const userStartingBalance = await ampl.balanceOf(userAddress)
     await buttonToken.approve(
       router.address,
-      ethers.utils.parseUnits('2500', 9),
+      ethers.utils.parseUnits('5000', 18),
     )
 
-    const burnAmount = ethers.utils.parseUnits('2500', 9)
+    const burnAmount = ethers.utils.parseUnits('5000', 18)
     const wamplAmount = burnAmount.div('10000').sub('1')
-    const amplAmount = wamplAmount
+    const amplAmount = wamplAmount.mul(5).div(BigNumber.from(10).pow(9));
     await expect(router.wamplBurnAndUnwrap(buttonToken.address, burnAmount))
       // 1. Transfer buttonTokens from user to router
       .to.emit(buttonToken, 'Transfer')
@@ -187,22 +185,16 @@ describe('ButtonTokenWamplRouter', () => {
       .withArgs(router.address, ethers.constants.AddressZero, burnAmount)
       .to.emit(wampl, 'Transfer')
       .withArgs(buttonToken.address, router.address, wamplAmount)
-      // ToDo: Fix these
       // 3. Burn wampl for ampl
-      // .to.emit(wampl, 'Transfer')
-      // .withArgs(router.address, ethers.constants.AddressZero, wamplAmount)
-      // .to.emit(ampl, 'Transfer')
-      // .withArgs(wampl.address, router.address, amplAmount)
-      // 4. Transfer ampl to user
-      // .to.emit(ampl, 'Transfer')
-      // .withArgs(router.address, userAddress, amplAmount)
-
-      // 4. Burn wampl for ampl sent directly to user
+      .to.emit(wampl, 'Transfer')
+      .withArgs(router.address, ethers.constants.AddressZero, wamplAmount)
+      // 4. Burnt wampl sends ampl directly to user
       .to.emit(ampl, 'Transfer')
-      .withArgs(wampl.address, userAddress, wamplAmount)
+      .withArgs(wampl.address, userAddress, amplAmount)
 
     const userEndingBalance = await ampl.balanceOf(userAddress)
     // make sure user balance increased by output amount minus some threshold for gas
+
     expect(
       userEndingBalance
         .sub(userStartingBalance)
@@ -228,8 +220,8 @@ describe('ButtonTokenWamplRouter', () => {
     const userStartingBalance = await ampl.balanceOf(userAddress)
     await buttonToken.approve(router.address, ethers.constants.MaxUint256)
     const userButtonTokenBalance = await buttonToken.balanceOf(userAddress)
-    const wamplAmount = userButtonTokenBalance.div('10000')
-    const amplAmount = wamplAmount
+    const wamplAmount = userButtonTokenBalance.div('10000');
+    const amplAmount = wamplAmount.mul(5).div(BigNumber.from(10).pow(9));
 
     await expect(router.wamplBurnAndUnwrapAll(buttonToken.address))
       // 1. Transfer buttonTokens from user to router
@@ -244,17 +236,12 @@ describe('ButtonTokenWamplRouter', () => {
       )
       .to.emit(wampl, 'Transfer')
       .withArgs(buttonToken.address, router.address, wamplAmount)
-      // ToDo: Fix these
-      // // 3. Burn wampl for ampl
-      // .to.emit(wampl, 'Transfer')
-      // .withArgs(router.address, ethers.constants.AddressZero, wamplAmount)
-      // .to.emit(ampl, 'Transfer')
-      // .withArgs(wampl.address, router.address, amplAmount)
-      // // 4. Transfer ampl to user
-      // .to.emit(ampl, 'Transfer')
-      // .withArgs(router.address, userAddress, amplAmount)
+      // 3. Burn wampl for ampl
+      .to.emit(wampl, 'Transfer')
+      .withArgs(router.address, ethers.constants.AddressZero, wamplAmount)
+      // 4. Burnt wampl sends ampl directly to user
       .to.emit(ampl, 'Transfer')
-      .withArgs(wampl.address, userAddress, wamplAmount)
+      .withArgs(wampl.address, userAddress, amplAmount)
 
     const userEndingBalance = await ampl.balanceOf(userAddress)
     // make sure user balance increased by output amount minus some threshold for gas

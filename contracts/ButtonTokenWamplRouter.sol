@@ -74,7 +74,7 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
         // Burn buttonToken to wampl
         buttonToken.burn(amount);
         // Burn wampl to ampl, directly send to user
-        return wampl.burnTo(msg.sender, wampl.balanceOf(address(this)));
+        return wampl.burnAllTo(msg.sender);
     }
 
     /**

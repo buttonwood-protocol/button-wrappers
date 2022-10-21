@@ -35,13 +35,8 @@ async function mockedOracle() {
 
 describe('ChainlinkOracle', function () {
   before('setup Orchestrator contract', async () => {
-    ;({
-      deployer,
-      user,
-      oracle,
-      oracleFetcher,
-      mockAggregator,
-    } = await waffle.loadFixture(mockedOracle))
+    ;({ deployer, user, oracle, oracleFetcher, mockAggregator } =
+      await waffle.loadFixture(mockedOracle))
   })
 
   describe('when sent ether', async function () {
@@ -92,7 +87,7 @@ describe('ChainlinkOracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(false)
-      expect(receipt.gasUsed.toString()).to.equal('26838')
+      expect(receipt.gasUsed.toString()).to.equal('37038')
     })
   })
 })

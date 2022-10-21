@@ -87,7 +87,7 @@ describe('ChainlinkOracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(false)
-      expect(receipt.gasUsed.toString()).to.equal('26838')
+      expect(receipt.gasUsed.toString()).to.equal('37038')
     })
   })
 })

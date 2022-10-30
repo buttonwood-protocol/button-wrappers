@@ -19,6 +19,7 @@ yarn test
 
 ## Deployments
 
+For the most up-to-date, please refer to: https://docs.prl.one/buttonwood/developers/deployed-contracts.
 ```yaml
 mainnet:
   ButtonTokenFactory: "0x84D0F1Cd873122F2A87673e079ea69cd80b51960"

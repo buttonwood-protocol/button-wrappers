@@ -676,3 +676,11 @@ describe('ButtonToken:withdrawAllTo', async function () {
       )
   })
 })
+
+describe('ButtonToken:mint', async () => {
+  it('should not be able to mint tiny amounts with 0 uAmount', async function () {
+    await setupContracts()
+
+    await expect(buttonToken.connect(userA).mint(toFixedPtAmt('0.000000000000000001'))).to.be.reverted
+  })
+})

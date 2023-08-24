@@ -62,10 +62,10 @@ task('deploy:UnbuttonToken')
   .addParam('underlying', 'the underlying token')
   .addParam('name', 'the name of the unbutton token')
   .addParam('symbol', 'the symbol of unbutton token')
-  .addParam('initialRate', 'the initial exchange rate')
+  .addParam('initialrate', 'the initial exchange rate')
   .setAction(async function (args: TaskArguments, hre) {
     const { ethers } = hre
-    const { factory, underlying, name, symbol, initialRate } = args
+    const { factory, underlying, name, symbol, initialrate } = args
     const accounts: Signer[] = await hre.ethers.getSigners()
     const deployer = accounts[0]
     const deployerAddress = await deployer.getAddress()
@@ -76,7 +76,7 @@ task('deploy:UnbuttonToken')
     )
     const byteArgs = ethers.utils.defaultAbiCoder.encode(
       ['address', 'string', 'string', 'uint256'],
-      [underlying, name, symbol, initialRate],
+      [underlying, name, symbol, initialrate],
     )
 
     const ubTemplate = await hre.ethers.getContractAt(
@@ -101,8 +101,11 @@ task('deploy:UnbuttonToken')
       ).wait(2)
     }
 
-    const deployedAddress = await ubFactory.callStatic.create(byteArgs)
-    const tx = await ubFactory.create(byteArgs)
+    console.log(await ubFactory.estimateGas['create(bytes)'](byteArgs))
+    console.log("HERE")
+
+    const deployedAddress = await ubFactory.callStatic['create(bytes)'](byteArgs)
+    const tx = await ubFactory['create(bytes)'](byteArgs)
     console.log('Successfully created tx', tx.hash)
     console.log('Token will be deployed to', deployedAddress)
     await tx.wait(5)

@@ -101,9 +101,6 @@ task('deploy:UnbuttonToken')
       ).wait(2)
     }
 
-    console.log(await ubFactory.estimateGas['create(bytes)'](byteArgs))
-    console.log("HERE")
-
     const deployedAddress = await ubFactory.callStatic['create(bytes)'](byteArgs)
     const tx = await ubFactory['create(bytes)'](byteArgs)
     console.log('Successfully created tx', tx.hash)

@@ -1,6 +1,6 @@
 # Notes
 
-## Deploying `UnbuttonToken`
+## Deploying `UnbuttonToken` on Testnet
 
 Run the following tasks:
 
@@ -29,4 +29,38 @@ Token will be deployed to 0xf4781a935Fe1F177f9ef65C69Fc64706a19e9F25
 # new unbutton WETH
 Successfully created tx 0xd5695e8c8f7d413404739634364156fff24db41085b30101783811378105f097
 Token will be deployed to 0x4fc8603DAFFA1391F31c1F55b45d54E1424D6C82
+```
+
+# Deploying `UnbuttonToken` on Tenderly Fork
+
+Replace network tag: `--network tenderly`
+
+```bash
+yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
+yarn hardhat deploy:UnbuttonToken --network tenderly  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name "Unbuttoned SEAM" --symbol ubASEAM --initialRate 1
+```
+
+Deploy commands:
+
+```bash
+yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
+
+yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E --underlying 0x6A8d8C95ea9384298e38480Fee16Fe62b152909D --name "Unbuttoned Aave BASE USDBC" --symbol ubABASEUSDBC --initialrate 1
+
+yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E --underlying 0x8a7bCC00059Ca5c3038E5DB9e555fc6538C2757C --name "Unbuttoned Aave BASE WETH" --symbol ubABASEWETH --initialrate 1
+```
+
+Created at:
+
+```
+Factory:
+UnbuttonToken template deployed to 0xAB99EB830C3584e30ec97663901695e00F18b2f8
+UnbuttonTokenFactory deployed to 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E
+
+USDC:
+[tbd]
+
+ubABASEWETH:
+Successfully created tx 0xd6dc1c12ee17f435a23eb3f4c480be2f2c75a5319ed7e9b711410e781a9ba186
+Token will be deployed to 0x8431ac8dF0C0e549cFab12253f2883709E0E830F
 ```

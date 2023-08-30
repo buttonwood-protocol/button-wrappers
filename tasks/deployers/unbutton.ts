@@ -1,11 +1,27 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { task, types } from 'hardhat/config'
-import { TaskArguments } from 'hardhat/types'
+import { TaskArguments, HttpNetworkUserConfig } from 'hardhat/types'
 
 task('deploy:UnbuttonTokenFactory').setAction(async function (
   _args: TaskArguments,
   hre,
 ) {
+
+  const accounts = await hre.ethers.getSigners();
+  const config = hre.network.config as HttpNetworkUserConfig;
+
+  if (hre.network.name && hre.network.name.toLowerCase() !== "tenderly") {
+    if (config.url !== undefined) {
+        hre.ethers.provider = new hre.ethers.providers.JsonRpcProvider(config.url);
+    }
+
+    const balanceAccounts = accounts.map(a => a.address);
+    await hre.ethers.provider.send("tenderly_setBalance", [
+        balanceAccounts,
+        hre.ethers.utils.hexValue(hre.ethers.utils.parseUnits("10000", "ether").toHexString()),
+    ]);
+  }
+
   const TokenTemplate = await hre.ethers.getContractFactory('UnbuttonToken')
   const tokenTemplate = await TokenTemplate.deploy()
   await tokenTemplate.deployed()

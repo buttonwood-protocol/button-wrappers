@@ -53,6 +53,15 @@ export default {
             mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
           },
     },
+    tenderly: {
+      chainId: 3030, // using same avee deploy chainId on tenderly
+      url: `https://rpc.tenderly.co/fork/${process.env.TENDERLY_FORK_ID}`,
+      accounts: process.env.DEV_PKEY
+        ? [process.env.DEV_PKEY]
+        : {
+            mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+          },
+    },
     'base-goerli': {
       url: `https://base-goerli.gateway.tenderly.co/${process.env.TENDERLY_PROJECT_ID}`,
       accounts: [process.env.DEV_PKEY as string],

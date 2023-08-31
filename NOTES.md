@@ -33,14 +33,14 @@ Token will be deployed to 0x4fc8603DAFFA1391F31c1F55b45d54E1424D6C82
 
 # Deploying `UnbuttonToken` on Tenderly Fork
 
-Replace network tag: `--network tenderly`
+Replace network tag: `--network tenderly`. Make sure to have some aTokens, for now need to run the UI `interface` locally and add tenderly network manually. Then supply to get aTokens.
 
 ```bash
 yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
 yarn hardhat deploy:UnbuttonToken --network tenderly  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name "Unbuttoned SEAM" --symbol ubASEAM --initialRate 1
 ```
 
-Deploy commands:
+## Tenderly Fork v1
 
 ```bash
 yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
@@ -57,10 +57,35 @@ Factory:
 UnbuttonToken template deployed to 0xAB99EB830C3584e30ec97663901695e00F18b2f8
 UnbuttonTokenFactory deployed to 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E
 
-USDC:
+ubABASEUSDBC:
 [tbd]
 
 ubABASEWETH:
 Successfully created tx 0xd6dc1c12ee17f435a23eb3f4c480be2f2c75a5319ed7e9b711410e781a9ba186
 Token will be deployed to 0x8431ac8dF0C0e549cFab12253f2883709E0E830F
+```
+
+## Tenderly Fork v2
+
+```bash
+yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
+
+yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10 --underlying 0x350B43b4C0757E2f589CACab7AD51aA74762F47B --name "Unbuttoned Aave BASE USDBC" --symbol ubABASEUSDBC --initialrate 1
+
+yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10 --underlying 0x7d00064279473c95FF1EEfAc79581405E6468aD5 --name "Unbuttoned Aave BASE WETH" --symbol ubABASEWETH --initialrate 1
+```
+
+Created at:
+
+```
+Factory:
+UnbuttonToken template deployed to 0x7223EF16A5167c7e853218C17bfd6cD6Eda3567d
+UnbuttonTokenFactory deployed to 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10
+
+ubABASEUSDBC:
+[tbd]
+
+ubABASEWETH:
+Successfully created tx 0xbb1f9c97c73de99e22227354295a4c3d6c7e68fcf077040c969b3090d0e65d70
+Token will be deployed to 0x91366f8dD9F4191F6310318813D548EeAc4aA740
 ```

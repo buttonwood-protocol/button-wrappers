@@ -10,7 +10,7 @@ task('deploy:UnbuttonTokenFactory').setAction(async function (
   const accounts = await hre.ethers.getSigners();
   const config = hre.network.config as HttpNetworkUserConfig;
 
-  if (hre.network.name && hre.network.name.toLowerCase() !== "tenderly") {
+  if (hre.network.name && hre.network.name.toLowerCase() === "tenderly") {
     if (config.url !== undefined) {
         hre.ethers.provider = new hre.ethers.providers.JsonRpcProvider(config.url);
     }

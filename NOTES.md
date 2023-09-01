@@ -6,7 +6,7 @@ Run the following tasks:
 
 ```bash
 yarn hardhat deploy:UnbuttonTokenFactory --network base-goerli
-yarn hardhat deploy:UnbuttonToken --network base-goerli  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name "Unbuttoned SEAM" --symbol ubASEAM --initialRate 1
+yarn hardhat deploy:UnbuttonToken --network base-goerli  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name {name} --symbol {symbol} --initialRate 1
 ```
 
 Note: make sure to have the underlying of the deployed wrapped asset, since it requires and `initialrate` of funds. For example, for Seamless, need to supply assets and get aTokens before wrapping below:
@@ -37,7 +37,7 @@ Replace network tag: `--network tenderly`. Make sure to have some aTokens, for n
 
 ```bash
 yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
-yarn hardhat deploy:UnbuttonToken --network tenderly  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name "Unbuttoned SEAM" --symbol ubASEAM --initialRate 1
+yarn hardhat deploy:UnbuttonToken --network tenderly  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name {name} --symbol {symbol} --initialRate 1
 ```
 
 ## Tenderly Fork v1

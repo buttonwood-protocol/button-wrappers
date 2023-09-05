@@ -40,32 +40,9 @@ yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
 yarn hardhat deploy:UnbuttonToken --network tenderly  --factory {factoryAddress} --underlying {tokenToWrapAddress} --name {name} --symbol {symbol} --initialRate 1
 ```
 
-## Tenderly Fork v1
-
-```bash
-yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
-
-yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E --underlying 0x6A8d8C95ea9384298e38480Fee16Fe62b152909D --name "Unbuttoned Aave BASE USDBC" --symbol ubABASEUSDBC --initialrate 1
-
-yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E --underlying 0x8a7bCC00059Ca5c3038E5DB9e555fc6538C2757C --name "Unbuttoned Aave BASE WETH" --symbol ubABASEWETH --initialrate 1
-```
-
-Created at:
-
-```
-Factory:
-UnbuttonToken template deployed to 0xAB99EB830C3584e30ec97663901695e00F18b2f8
-UnbuttonTokenFactory deployed to 0xe692F28FB5A4370cb08D0c6b5bab629ebE17673E
-
-ubABASEUSDBC:
-[tbd]
-
-ubABASEWETH:
-Successfully created tx 0xd6dc1c12ee17f435a23eb3f4c480be2f2c75a5319ed7e9b711410e781a9ba186
-Token will be deployed to 0x8431ac8dF0C0e549cFab12253f2883709E0E830F
-```
-
 ## Tenderly Fork v2
+
+Create wrappers of the AAVE aTokens, can grab from AAVE frontend
 
 ```bash
 yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
@@ -83,7 +60,8 @@ UnbuttonToken template deployed to 0x7223EF16A5167c7e853218C17bfd6cD6Eda3567d
 UnbuttonTokenFactory deployed to 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10
 
 ubABASEUSDBC:
-[tbd]
+Successfully created tx 0x0bf97ccaae87324f141b1ff82c156c5baa7602d3fe9763b010c1962968a9e1f4
+Token will be deployed to 0xf84e14984Dccf4D27267f597dC4BF74b334015b7
 
 ubABASEWETH:
 Successfully created tx 0xbb1f9c97c73de99e22227354295a4c3d6c7e68fcf077040c969b3090d0e65d70

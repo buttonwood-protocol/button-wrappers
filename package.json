@@ -40,7 +40,7 @@
     "ethereum-waffle": "^4.0.7",
     "ethereumjs-util": "^7.0.7",
     "ethers": "5.1.4",
-    "hardhat": "^2.12.0",
+    "hardhat": "^2.16.1",
     "hardhat-gas-reporter": "^1.0.4",
     "pre-commit": "^1.2.2",
     "prettier": "^2.7.1",
@@ -48,7 +48,7 @@
     "solc": "0.4.24",
     "solhint": "^3.3.6",
     "solhint-plugin-prettier": "^0.0.5",
-    "solidity-coverage": "^0.7.13",
+    "solidity-coverage": "^0.8.4",
     "stochasm": "^0.5.0",
     "ts-node": "^9.0.0",
     "typescript": "^4.0.2"

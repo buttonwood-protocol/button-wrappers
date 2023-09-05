@@ -479,6 +479,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         uint256 amount,
         uint256 bits
     ) private {
+        require(uAmount > 0, "ButtonToken: No tokens deposited");
         require(amount > 0, "ButtonToken: too few button tokens to mint");
 
         IERC20(underlying).safeTransferFrom(from, address(this), uAmount);

@@ -13,7 +13,29 @@ const DEFAULT_MNEMONIC = Wallet.createRandom().mnemonic.phrase
 
 export default {
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      'base-goerli': process.env.BASE_API_KEY,
+      'base-mainnet': process.env.BASE_API_KEY,
+    },
+    customChains: [
+      {
+        network: "base-mainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org"
+        }
+      },
+      {
+        network: "base-goerli",
+        chainId: 84531,
+        urls: {
+          apiURL: "https://api-goerli.basescan.org/api",
+          browserURL: "https://goerli.basescan.org"
+        }
+      }
+    ],
   },
   networks: {
     rinkeby: {
@@ -47,6 +69,24 @@ export default {
         : {
             mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
           },
+    },
+    'base-mainnet': {
+      url: 'https://mainnet.base.org',
+      accounts: process.env.PROD_PKEY
+        ? [process.env.PROD_PKEY]
+        : {
+          mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
+        },
+      gasPrice: 1000000000,
+    },
+    'base-goerli': {
+      url: 'https://goerli.base.org',
+      accounts: process.env.DEV_PKEY
+        ? [process.env.DEV_PKEY]
+        : {
+          mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+        },
+      gasPrice: 1000000000,
     },
   },
   solidity: {

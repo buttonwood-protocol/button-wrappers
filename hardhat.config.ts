@@ -69,6 +69,11 @@ export default {
       gasMultiplier: 1.1,
       allowUnlimitedContractSize: true
     },
+    "base-mainnet": {
+      url: `https://base.gateway.tenderly.co/${process.env.TENDERLY_PROJECT_ID}`,
+      accounts: [process.env.PROD_PKEY as string],
+      gasPrice: 1000000000,
+    },
   },
   solidity: {
     compilers: [

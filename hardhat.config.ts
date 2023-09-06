@@ -4,7 +4,7 @@ import { Wallet } from 'ethers'
 import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
-import '@nomiclabs/hardhat-etherscan'
+import '@nomicfoundation/hardhat-verify'
 import 'solidity-coverage'
 import 'hardhat-gas-reporter'
 import './tasks'
@@ -14,9 +14,9 @@ const DEFAULT_MNEMONIC = Wallet.createRandom().mnemonic.phrase
 export default {
   etherscan: {
     apiKey: {
-      mainnet: process.env.ETHERSCAN_API_KEY,
+      mainnet: process.env.ETHERSCAN_API_KEY as string,
       baseGoerli: "PLACEHOLDER_STRING",
-      base: process.env.BASESCAN_API_KEY,
+      base: process.env.BASESCAN_API_KEY as string,
     }
   },
   networks: {

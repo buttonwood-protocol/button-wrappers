@@ -93,3 +93,15 @@ wsWETH:
 Successfully created tx 0x261631b8b7901ed9b46f32e0cac427a308e32b7b3867ecb52e26f35e67652eca
 Token will be deployed to 0xAf72867FB2bFBb55FD44773733a7bc03963f701f
 ```
+
+Verify contracts:
+
+```bash
+yarn hardhat verify:UnbuttonToken --network base-mainnet --address 0xf9A5D255220e14E69475c1180640eAB3f14Ba2Aa
+
+yarn hardhat verify:UnbuttonTokenFactory --network base-mainnet --address 0x613379008101df98D4CE5a1819e9F53Fe33dc138 --template 0xf9A5D255220e14E69475c1180640eAB3f14Ba2Aa
+
+yarn hardhat verify:UnbuttonToken --network base-mainnet --address 0x7A595538b91D40B411A32a9c6668D8f63c130f0c
+
+yarn hardhat verify:UnbuttonToken --network base-mainnet --address 0xAf72867FB2bFBb55FD44773733a7bc03963f701f
+```

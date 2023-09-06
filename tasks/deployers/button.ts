@@ -96,30 +96,36 @@ task('deploy:ButtonToken')
 
 task('deploy:ChainlinkOracle')
   .addParam('aggregator', 'the address of the backing chainlink aggregator')
-  .addParam('stalenessThresholdSecs', 'the number of seconds before refresh')
+  .addParam('stalenessthresholdsecs', 'the number of seconds before refresh')
   .setAction(async function(args: TaskArguments, hre) {
-    const { aggregator, stalenessThresholdSecs } = args
+    const { aggregator, stalenessthresholdsecs } = args
     const ChainlinkOracle = await hre.ethers.getContractFactory(
       'ChainlinkOracle',
     )
     const oracle = await ChainlinkOracle.deploy(
       aggregator,
-      stalenessThresholdSecs,
+      stalenessthresholdsecs,
     )
     await oracle.deployed()
-    console.log(`Oracle deployed to ${oracle.address}`)
-    return oracle.address
+    const oracleAddress = oracle.address
+    console.log(`Oracle deployed to ${oracleAddress}`)
+
+    try {
+      await hre.run('verify:ChainlinkOracle', { address: oracleAddress, aggregator, stalenessthresholdsecs })
+    } catch (e) {
+      console.log('Unable to verify on etherscan', e)
+    }
   })
 
 task('verify:ChainlinkOracle')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .addParam('aggregator', 'the address of the backing chainlink aggregator')
-  .addParam('stalenessThresholdSecs', 'the number of seconds before refresh')
+  .addParam('stalenessthresholdsecs', 'the number of seconds before refresh')
   .setAction(async function(args: TaskArguments, hre) {
-    const { address, aggregator, stalenessThresholdSecs } = args
+    const { address, aggregator, stalenessthresholdsecs } = args
 
     await hre.run('verify:verify', {
       address,
-      constructorArguments: [aggregator, stalenessThresholdSecs],
+      constructorArguments: [aggregator, stalenessthresholdsecs],
     })
   })

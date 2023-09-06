@@ -13,12 +13,11 @@ const DEFAULT_MNEMONIC = Wallet.createRandom().mnemonic.phrase
 
 export default {
   etherscan: {
-    // apiKey: {
-    //   mainnet: process.env.ETHERSCAN_API_KEY,
-    //   baseGoerli: "PLACEHOLDER_STRING",
-    //   base: process.env.BASESCAN_API_KEY,
-    // }
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      baseGoerli: "PLACEHOLDER_STRING",
+      base: process.env.BASESCAN_API_KEY,
+    }
   },
   networks: {
     rinkeby: {

@@ -67,3 +67,29 @@ ubABASEWETH:
 Successfully created tx 0xbb1f9c97c73de99e22227354295a4c3d6c7e68fcf077040c969b3090d0e65d70
 Token will be deployed to 0x91366f8dD9F4191F6310318813D548EeAc4aA740
 ```
+
+## Base Mainnet
+
+```bash
+yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
+
+yarn hardhat deploy:UnbuttonToken --network base-mainnet --factory 0x613379008101df98D4CE5a1819e9F53Fe33dc138 --underlying 0x13A13869B814Be8F13B86e9875aB51bda882E391 --name "Wrapped Seamless USDbC" --symbol wsUSDbC --initialrate 1
+
+yarn hardhat deploy:UnbuttonToken --network base-mainnet --factory 0x613379008101df98D4CE5a1819e9F53Fe33dc138 --underlying 0x48bf8fCd44e2977c8a9A744658431A8e6C0d866c --name "Wrapped Seamless WETH" --symbol wsWETH --initialrate 1
+```
+
+Creates:
+
+```
+Factory:
+UnbuttonToken template deployed to 0xf9A5D255220e14E69475c1180640eAB3f14Ba2Aa
+UnbuttonTokenFactory deployed to 0x613379008101df98D4CE5a1819e9F53Fe33dc138
+
+wsUSDbC:
+Successfully created tx 0x1be67889ff36c8077a25aee0e00e13bd5aefb0239b19ba8e105958faca2eb504
+Token will be deployed to 0x7A595538b91D40B411A32a9c6668D8f63c130f0c
+
+wsWETH:
+Successfully created tx 0x261631b8b7901ed9b46f32e0cac427a308e32b7b3867ecb52e26f35e67652eca
+Token will be deployed to 0xAf72867FB2bFBb55FD44773733a7bc03963f701f
+```

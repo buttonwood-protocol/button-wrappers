@@ -584,42 +584,58 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         require(priceDecimals <= 18, "ButtonToken: Price Decimals must be under 18");
         if (priceDecimals == 0) {
             return 2**83 - 1;
-        } else if (priceDecimals == 1) {
-            return 2**84 - 1;
-        } else if (priceDecimals == 2) {
-            return 2**86 - 1;
-        } else if (priceDecimals == 3) {
-            return 2**88 - 1;
-        } else if (priceDecimals == 4) {
-            return 2**89 - 1;
-        } else if (priceDecimals == 5) {
-            return 2**91 - 1;
-        } else if (priceDecimals == 6) {
-            return 2**93 - 1;
-        } else if (priceDecimals == 7) {
-            return 2**94 - 1;
-        } else if (priceDecimals == 8) {
-            return 2**96 - 1;
-        } else if (priceDecimals == 9) {
-            return 2**98 - 1;
-        } else if (priceDecimals == 10) {
-            return 2**99 - 1;
-        } else if (priceDecimals == 11) {
-            return 2**101 - 1;
-        } else if (priceDecimals == 12) {
-            return 2**103 - 1;
-        } else if (priceDecimals == 13) {
-            return 2**104 - 1;
-        } else if (priceDecimals == 14) {
-            return 2**106 - 1;
-        } else if (priceDecimals == 15) {
-            return 2**108 - 1;
-        } else if (priceDecimals == 16) {
-            return 2**109 - 1;
-        } else if (priceDecimals == 17) {
-            return 2**111 - 1;
-        } else {
-            return 2**113 - 1;
         }
+        if (priceDecimals == 1) {
+            return 2**84 - 1;
+        }
+        if (priceDecimals == 2) {
+            return 2**86 - 1;
+        }
+        if (priceDecimals == 3) {
+            return 2**88 - 1;
+        }
+        if (priceDecimals == 4) {
+            return 2**89 - 1;
+        }
+        if (priceDecimals == 5) {
+            return 2**91 - 1;
+        }
+        if (priceDecimals == 6) {
+            return 2**93 - 1;
+        }
+        if (priceDecimals == 7) {
+            return 2**94 - 1;
+        }
+        if (priceDecimals == 8) {
+            return 2**96 - 1;
+        }
+        if (priceDecimals == 9) {
+            return 2**98 - 1;
+        }
+        if (priceDecimals == 10) {
+            return 2**99 - 1;
+        }
+        if (priceDecimals == 11) {
+            return 2**101 - 1;
+        }
+        if (priceDecimals == 12) {
+            return 2**103 - 1;
+        }
+        if (priceDecimals == 13) {
+            return 2**104 - 1;
+        }
+        if (priceDecimals == 14) {
+            return 2**106 - 1;
+        }
+        if (priceDecimals == 15) {
+            return 2**108 - 1;
+        }
+        if (priceDecimals == 16) {
+            return 2**109 - 1;
+        }
+        if (priceDecimals == 17) {
+            return 2**111 - 1;
+        }
+        return 2**113 - 1;
     }
 }

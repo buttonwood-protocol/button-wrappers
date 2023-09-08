@@ -582,6 +582,16 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @dev Derives max-price based on price-decimals
     function maxPriceFromPriceDecimals(uint256 priceDecimals) private pure returns (uint256) {
         require(priceDecimals <= 18, "ButtonToken: Price Decimals must be under 18");
+        // Given that 18,8,6 are the most common price decimals, we optimize for those cases
+        if (priceDecimals == 18) {
+            return 2**113 - 1;
+        }
+        if (priceDecimals == 8) {
+            return 2**96 - 1;
+        }
+        if (priceDecimals == 6) {
+            return 2**93 - 1;
+        }
         if (priceDecimals == 0) {
             return 2**83 - 1;
         }
@@ -600,14 +610,8 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         if (priceDecimals == 5) {
             return 2**91 - 1;
         }
-        if (priceDecimals == 6) {
-            return 2**93 - 1;
-        }
         if (priceDecimals == 7) {
             return 2**94 - 1;
-        }
-        if (priceDecimals == 8) {
-            return 2**96 - 1;
         }
         if (priceDecimals == 9) {
             return 2**98 - 1;
@@ -633,9 +637,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         if (priceDecimals == 16) {
             return 2**109 - 1;
         }
-        if (priceDecimals == 17) {
-            return 2**111 - 1;
-        }
-        return 2**113 - 1;
+        // priceDecimals == 17
+        return 2**111 - 1;
     }
 }

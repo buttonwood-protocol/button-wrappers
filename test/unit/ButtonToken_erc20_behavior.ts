@@ -67,7 +67,7 @@ async function setupToken() {
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
   token = await buttonTokenFactory.connect(owner).deploy()
 
-  token.initialize(mockBTC.address, NAME, SYMBOL, mockOracle.address)
+  token.initialize(mockBTC.address, NAME, SYMBOL, mockOracle.address, ORACLE_DECIMALS)
 
   await mockBTC.connect(owner).mint(await owner.getAddress(), INITIAL_SUPPLY)
 

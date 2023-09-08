@@ -62,9 +62,6 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     //--------------------------------------------------------------------------
     // Constants
 
-    /// @dev The price has a 8 decimal point precision.
-    uint256 public constant PRICE_DECIMALS = 8;
-
     /// @dev Math constants.
     uint256 private constant MAX_UINT256 = type(uint256).max;
 
@@ -79,8 +76,8 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @dev Number of BITS per unit of deposit.
     uint256 private constant BITS_PER_UNDERLYING = TOTAL_BITS / MAX_UNDERLYING;
 
-    /// @dev Number of BITS per unit of deposit * (1 USD).
-    uint256 private constant PRICE_BITS = BITS_PER_UNDERLYING * (10**PRICE_DECIMALS);
+//    /// @dev Number of BITS per unit of deposit * (1 USD).
+//    uint256 private constant PRICE_BITS = BITS_PER_UNDERLYING * (10**PRICE_DECIMALS);
 
     /// @dev TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_BITS + 1) - 1) / 2
     ///      Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE.
@@ -106,6 +103,12 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
 
     /// @inheritdoc IERC20Metadata
     string public override symbol;
+
+    /// @dev The decimal point precision of the oracle price
+    uint256 public priceDecimals;
+
+    /// @dev Number of BITS per unit of deposit * (1 USD).
+    uint256 private priceBits;
 
     /// @dev internal balance, bits issued per account
     mapping(address => uint256) private _accountBits;
@@ -137,11 +140,13 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @param name_ The ERC20 name.
     /// @param symbol_ The ERC20 symbol.
     /// @param oracle_ The oracle which provides the underlying token price.
+    /// @param priceDecimals_ The decimal point precision of the oracle price.
     function initialize(
         address underlying_,
         string memory name_,
         string memory symbol_,
-        address oracle_
+        address oracle_,
+        uint256 priceDecimals_
     ) public override initializer {
         require(underlying_ != address(0), "ButtonToken: invalid underlying reference");
 
@@ -150,6 +155,8 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         underlying = underlying_;
         name = name_;
         symbol = symbol_;
+        priceDecimals = priceDecimals_;
+        priceBits = BITS_PER_UNDERLYING * (10**priceDecimals);
 
         // MAX_UNDERLYING worth bits are 'pre-mined' to `address(0x)`
         // at the time of construction.
@@ -553,7 +560,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     }
 
     /// @dev Convert button token amount to bits.
-    function _amountToBits(uint256 amount, uint256 price) private pure returns (uint256) {
+    function _amountToBits(uint256 amount, uint256 price) private view returns (uint256) {
         return amount * _bitsPerToken(price);
     }
 
@@ -563,7 +570,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     }
 
     /// @dev Convert bits to button token amount.
-    function _bitsToAmount(uint256 bits, uint256 price) private pure returns (uint256) {
+    function _bitsToAmount(uint256 bits, uint256 price) private view returns (uint256) {
         return bits / _bitsPerToken(price);
     }
 
@@ -573,7 +580,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     }
 
     /// @dev Internal scalar to convert bits to button tokens.
-    function _bitsPerToken(uint256 price) private pure returns (uint256) {
-        return PRICE_BITS / price;
+    function _bitsPerToken(uint256 price) private view returns (uint256) {
+        return priceBits / price;
     }
 }

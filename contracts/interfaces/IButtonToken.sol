@@ -25,6 +25,7 @@ interface IButtonToken is IButtonWrapper, IRebasingERC20 {
         address underlying_,
         string memory name_,
         string memory symbol_,
-        address oracle_
+        address oracle_,
+        uint256 initialPrice_
     ) external;
 }

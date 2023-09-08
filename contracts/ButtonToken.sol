@@ -76,10 +76,6 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @dev Number of BITS per unit of deposit.
     uint256 private constant BITS_PER_UNDERLYING = TOTAL_BITS / MAX_UNDERLYING;
 
-    /// @dev TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_BITS + 1) - 1) / 2
-    ///      Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE.
-    uint256 public constant MAX_PRICE = (2**96 - 1); // (2^96) - 1
-
     //--------------------------------------------------------------------------
     // Attributes
 
@@ -101,11 +97,12 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @inheritdoc IERC20Metadata
     string public override symbol;
 
-    /// @dev The decimal point precision of the oracle price
-    uint256 public priceDecimals;
-
     /// @dev Number of BITS per unit of deposit * (1 USD).
     uint256 private priceBits;
+
+    /// @dev trueMaxPrice = maximum integer < (sqrt(4*priceBits + 1) - 1) / 2
+    ///      maxPrice is the closest power of two which is just under trueMaxPrice.
+    uint256 private maxPrice;
 
     /// @dev internal balance, bits issued per account
     mapping(address => uint256) private _accountBits;
@@ -152,8 +149,8 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         underlying = underlying_;
         name = name_;
         symbol = symbol_;
-        priceDecimals = priceDecimals_;
-        priceBits = BITS_PER_UNDERLYING * (10**priceDecimals);
+        priceBits = BITS_PER_UNDERLYING * (10**priceDecimals_);
+        maxPrice = maxPriceFromPriceDecimals(priceDecimals_);
 
         // MAX_UNDERLYING worth bits are 'pre-mined' to `address(0x)`
         // at the time of construction.
@@ -527,8 +524,8 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
 
     /// @dev Updates the `lastPrice` and recomputes the internal scalar.
     function _rebase(uint256 price) private {
-        if (price > MAX_PRICE) {
-            price = MAX_PRICE;
+        if (price > maxPrice) {
+            price = maxPrice;
         }
 
         lastPrice = price;
@@ -579,5 +576,49 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @dev Internal scalar to convert bits to button tokens.
     function _bitsPerToken(uint256 price) private view returns (uint256) {
         return priceBits / price;
+    }
+
+    /// @dev Derives max-price based on price-decimals
+    function maxPriceFromPriceDecimals(uint256 priceDecimals) private pure returns (uint256) {
+        require(priceDecimals <= 18, "ButtonToken: Price Decimals must be under 18");
+        if (priceDecimals == 0) {
+            return (2**83 - 1);
+        } else if (priceDecimals == 1) {
+            return (2**84 - 1);
+        } else if (priceDecimals == 2) {
+            return (2**86 - 1);
+        } else if (priceDecimals == 3) {
+            return (2**88 - 1);
+        } else if (priceDecimals == 4) {
+            return (2**89 - 1);
+        } else if (priceDecimals == 5) {
+            return (2**91 - 1);
+        } else if (priceDecimals == 6) {
+            return (2**93 - 1);
+        } else if (priceDecimals == 7) {
+            return (2**94 - 1);
+        } else if (priceDecimals == 8) {
+            return (2**96 - 1);
+        } else if (priceDecimals == 9) {
+            return (2**98 - 1);
+        } else if (priceDecimals == 10) {
+            return (2**99 - 1);
+        } else if (priceDecimals == 11) {
+            return (2**101 - 1);
+        } else if (priceDecimals == 12) {
+            return (2**103 - 1);
+        } else if (priceDecimals == 13) {
+            return (2**104 - 1);
+        } else if (priceDecimals == 14) {
+            return (2**106 - 1);
+        } else if (priceDecimals == 15) {
+            return (2**108 - 1);
+        } else if (priceDecimals == 16) {
+            return (2**109 - 1);
+        } else if (priceDecimals == 17) {
+            return (2**111 - 1);
+        } else {
+            return (2**113 - 1);
+        }
     }
 }

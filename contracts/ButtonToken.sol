@@ -76,9 +76,6 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @dev Number of BITS per unit of deposit.
     uint256 private constant BITS_PER_UNDERLYING = TOTAL_BITS / MAX_UNDERLYING;
 
-//    /// @dev Number of BITS per unit of deposit * (1 USD).
-//    uint256 private constant PRICE_BITS = BITS_PER_UNDERLYING * (10**PRICE_DECIMALS);
-
     /// @dev TRUE_MAX_PRICE = maximum integer < (sqrt(4*PRICE_BITS + 1) - 1) / 2
     ///      Setting MAX_PRICE to the closest two power which is just under TRUE_MAX_PRICE.
     uint256 public constant MAX_PRICE = (2**96 - 1); // (2^96) - 1

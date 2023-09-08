@@ -31,7 +31,10 @@ contract ButtonTokenFactory is InstanceRegistry, IFactory {
         string memory symbol;
         address oracle;
         uint256 priceDecimals;
-        (underlying, name, symbol, oracle, priceDecimals) = abi.decode(args, (address, string, string, address, uint256));
+        (underlying, name, symbol, oracle, priceDecimals) = abi.decode(
+            args,
+            (address, string, string, address, uint256)
+        );
         return _create(underlying, name, symbol, oracle, priceDecimals);
     }
 

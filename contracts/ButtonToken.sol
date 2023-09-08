@@ -524,8 +524,9 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
 
     /// @dev Updates the `lastPrice` and recomputes the internal scalar.
     function _rebase(uint256 price) private {
-        if (price > maxPrice) {
-            price = maxPrice;
+        uint256 _maxPrice = maxPrice;
+        if (price > _maxPrice) {
+            price = _maxPrice;
         }
 
         lastPrice = price;
@@ -582,43 +583,43 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     function maxPriceFromPriceDecimals(uint256 priceDecimals) private pure returns (uint256) {
         require(priceDecimals <= 18, "ButtonToken: Price Decimals must be under 18");
         if (priceDecimals == 0) {
-            return (2**83 - 1);
+            return 2**83 - 1;
         } else if (priceDecimals == 1) {
-            return (2**84 - 1);
+            return 2**84 - 1;
         } else if (priceDecimals == 2) {
-            return (2**86 - 1);
+            return 2**86 - 1;
         } else if (priceDecimals == 3) {
-            return (2**88 - 1);
+            return 2**88 - 1;
         } else if (priceDecimals == 4) {
-            return (2**89 - 1);
+            return 2**89 - 1;
         } else if (priceDecimals == 5) {
-            return (2**91 - 1);
+            return 2**91 - 1;
         } else if (priceDecimals == 6) {
-            return (2**93 - 1);
+            return 2**93 - 1;
         } else if (priceDecimals == 7) {
-            return (2**94 - 1);
+            return 2**94 - 1;
         } else if (priceDecimals == 8) {
-            return (2**96 - 1);
+            return 2**96 - 1;
         } else if (priceDecimals == 9) {
-            return (2**98 - 1);
+            return 2**98 - 1;
         } else if (priceDecimals == 10) {
-            return (2**99 - 1);
+            return 2**99 - 1;
         } else if (priceDecimals == 11) {
-            return (2**101 - 1);
+            return 2**101 - 1;
         } else if (priceDecimals == 12) {
-            return (2**103 - 1);
+            return 2**103 - 1;
         } else if (priceDecimals == 13) {
-            return (2**104 - 1);
+            return 2**104 - 1;
         } else if (priceDecimals == 14) {
-            return (2**106 - 1);
+            return 2**106 - 1;
         } else if (priceDecimals == 15) {
-            return (2**108 - 1);
+            return 2**108 - 1;
         } else if (priceDecimals == 16) {
-            return (2**109 - 1);
+            return 2**109 - 1;
         } else if (priceDecimals == 17) {
-            return (2**111 - 1);
+            return 2**111 - 1;
         } else {
-            return (2**113 - 1);
+            return 2**113 - 1;
         }
     }
 }

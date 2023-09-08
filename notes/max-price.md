@@ -32,11 +32,7 @@ for (let priceDecimals = 0n; priceDecimals <=18n; priceDecimals++){
     var TRUE_MAX_PRICE = (sqrt(4n*PRICE_BITS + 1n) - 1n) / 2n;
     var MAX_PRICE_EXP = BigInt( TRUE_MAX_PRICE.toString(2).length-1);
     var MAX_PRICE = 2n**(MAX_PRICE_EXP)-1n;
-    console.log('priceDecimals', priceDecimals);
-    console.log('PRICE_BITS', PRICE_BITS);
-    console.log('TRUE_MAX_PRICE', TRUE_MAX_PRICE);
-    console.log('MAX_PRICE_EXP', MAX_PRICE_EXP);
-    console.log('MAX_PRICE', MAX_PRICE);
-    console.log('TRUE_MAX_PRICE - MAX_PRICE', TRUE_MAX_PRICE - MAX_PRICE);
+    console.log('priceDecimals', priceDecimals, 'MAX_PRICE_EXP', MAX_PRICE_EXP);
+
 }
 ```

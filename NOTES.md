@@ -50,6 +50,9 @@ yarn hardhat deploy:UnbuttonTokenFactory --network tenderly
 yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10 --underlying 0x350B43b4C0757E2f589CACab7AD51aA74762F47B --name "Unbuttoned Aave BASE USDBC" --symbol ubABASEUSDBC --initialrate 1
 
 yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10 --underlying 0x7d00064279473c95FF1EEfAc79581405E6468aD5 --name "Unbuttoned Aave BASE WETH" --symbol ubABASEWETH --initialrate 1
+
+# fixed decimals
+yarn hardhat deploy:UnbuttonToken --network tenderly --factory 0x8676837f4cC1ad747a8270b6A2991AB0d0adeA10 --underlying 0x350B43b4C0757E2f589CACab7AD51aA74762F47B --name "Unbuttoned Aave BASE USDBC" --symbol ubABASEUSDBC --initialrate 1
 ```
 
 Created at:
@@ -66,6 +69,10 @@ Token will be deployed to 0xf84e14984Dccf4D27267f597dC4BF74b334015b7
 ubABASEWETH:
 Successfully created tx 0xbb1f9c97c73de99e22227354295a4c3d6c7e68fcf077040c969b3090d0e65d70
 Token will be deployed to 0x91366f8dD9F4191F6310318813D548EeAc4aA740
+
+ubABASEUSDBC (fixed decimals):
+Successfully created tx 0x55356bd905dc2ab1d946ddefa875a9d0d1d0ea658c2ecc205063bc277e77c538
+Token will be deployed to 0xD3C0a1B34ef8B5d38cc10694Fe5ABd3D1353eB61
 ```
 
 ## Base Mainnet

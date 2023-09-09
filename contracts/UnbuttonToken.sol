@@ -2,6 +2,7 @@ pragma solidity 0.8.4;
 
 import {IButtonWrapper} from "./interfaces/IButtonWrapper.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/interfaces/IERC20MetadataUpgradeable.sol";
 // solhint-disable-next-line max-line-length
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 // solhint-disable-next-line max-line-length
@@ -168,6 +169,10 @@ contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
 
     //--------------------------------------------------------------------------
     // ButtonWrapper view methods
+
+    function decimals() public view virtual override returns (uint8) {
+        return IERC20MetadataUpgradeable(underlying).decimals();
+    }
 
     /// @inheritdoc IButtonWrapper
     function totalUnderlying() external view override returns (uint256) {

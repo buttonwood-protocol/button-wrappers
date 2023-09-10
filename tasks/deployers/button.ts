@@ -2,7 +2,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { task, types } from 'hardhat/config'
 import { TaskArguments } from 'hardhat/types'
 
-task('deploy:ButtonTokenFactory').setAction(async function(
+task('deploy:ButtonTokenFactory').setAction(async function (
   _args: TaskArguments,
   hre,
 ) {
@@ -37,7 +37,7 @@ task('deploy:ButtonTokenFactory').setAction(async function(
 
 task('verify:ButtonToken', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
-  .setAction(async function(args: TaskArguments, hre) {
+  .setAction(async function (args: TaskArguments, hre) {
     const { address } = args
 
     await hre.run('verify:verify', {
@@ -49,7 +49,7 @@ task('verify:ButtonToken', 'Verifies on etherscan')
 task('verify:ButtonTokenFactory', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .addParam('template', 'the template address', undefined, types.string, false)
-  .setAction(async function(args: TaskArguments, hre) {
+  .setAction(async function (args: TaskArguments, hre) {
     const { address, template } = args
 
     await hre.run('verify:verify', {
@@ -64,7 +64,7 @@ task('deploy:ButtonToken')
   .addParam('name', 'the name of the button token')
   .addParam('symbol', 'the symbol of button token')
   .addParam('oracle', 'the oracle address. deploy with deploy:ChainlinkOracle')
-  .setAction(async function(args: TaskArguments, hre) {
+  .setAction(async function (args: TaskArguments, hre) {
     const { factory, underlying, name, symbol, oracle } = args
     const accounts: Signer[] = await hre.ethers.getSigners()
     const deployer = accounts[0]
@@ -76,7 +76,7 @@ task('deploy:ButtonToken')
 
     const deployedAddress = await bFactory.callStatic[
       'create(address,string,string,address)'
-      ](underlying, name, symbol, oracle)
+    ](underlying, name, symbol, oracle)
     const tx = await bFactory['create(address,string,string,address)'](
       underlying,
       name,
@@ -97,7 +97,7 @@ task('deploy:ButtonToken')
 task('deploy:ChainlinkOracle')
   .addParam('aggregator', 'the address of the backing chainlink aggregator')
   .addParam('stalenessThresholdSecs', 'the number of seconds before refresh')
-  .setAction(async function(args: TaskArguments, hre) {
+  .setAction(async function (args: TaskArguments, hre) {
     const { aggregator, stalenessThresholdSecs } = args
     const ChainlinkOracle = await hre.ethers.getContractFactory(
       'ChainlinkOracle',
@@ -115,7 +115,7 @@ task('verify:ChainlinkOracle')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .addParam('aggregator', 'the address of the backing chainlink aggregator')
   .addParam('stalenessThresholdSecs', 'the number of seconds before refresh')
-  .setAction(async function(args: TaskArguments, hre) {
+  .setAction(async function (args: TaskArguments, hre) {
     const { address, aggregator, stalenessThresholdSecs } = args
 
     await hre.run('verify:verify', {

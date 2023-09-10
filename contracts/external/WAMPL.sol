@@ -269,18 +269,18 @@ contract WAMPL is ERC20Upgradeable, ERC20PermitUpgradeable {
 
     /// @dev Converts AMPLs to wAMPL amount.
     function _ampleToWample(uint256 amples, uint256 totalAMPLSupply)
-    private
-    pure
-    returns (uint256)
+        private
+        pure
+        returns (uint256)
     {
         return (amples * MAX_WAMPL_SUPPLY) / totalAMPLSupply;
     }
 
     /// @dev Converts wAMPLs amount to AMPLs.
     function _wampleToAmple(uint256 wamples, uint256 totalAMPLSupply)
-    private
-    pure
-    returns (uint256)
+        private
+        pure
+        returns (uint256)
     {
         return (wamples * totalAMPLSupply) / MAX_WAMPL_SUPPLY;
     }

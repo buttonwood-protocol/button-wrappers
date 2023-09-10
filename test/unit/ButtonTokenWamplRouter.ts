@@ -80,7 +80,7 @@ describe('ButtonTokenWamplRouter', () => {
     const userAddress = await user.getAddress()
 
     const depositAmount = ethers.utils.parseUnits('5', 9)
-    const wamplAmount = depositAmount.mul(BigNumber.from(10).pow(9)).div(5);
+    const wamplAmount = depositAmount.mul(BigNumber.from(10).pow(9)).div(5)
     await ampl.connect(user).approve(router.address, depositAmount)
 
     await expect(router.wamplWrapAndDeposit(buttonToken.address, depositAmount))
@@ -175,7 +175,7 @@ describe('ButtonTokenWamplRouter', () => {
 
     const burnAmount = ethers.utils.parseUnits('5000', 18)
     const wamplAmount = burnAmount.div('10000').sub('1')
-    const amplAmount = wamplAmount.mul(5).div(BigNumber.from(10).pow(9));
+    const amplAmount = wamplAmount.mul(5).div(BigNumber.from(10).pow(9))
     await expect(router.wamplBurnAndUnwrap(buttonToken.address, burnAmount))
       // 1. Transfer buttonTokens from user to router
       .to.emit(buttonToken, 'Transfer')
@@ -220,8 +220,8 @@ describe('ButtonTokenWamplRouter', () => {
     const userStartingBalance = await ampl.balanceOf(userAddress)
     await buttonToken.approve(router.address, ethers.constants.MaxUint256)
     const userButtonTokenBalance = await buttonToken.balanceOf(userAddress)
-    const wamplAmount = userButtonTokenBalance.div('10000');
-    const amplAmount = wamplAmount.mul(5).div(BigNumber.from(10).pow(9));
+    const wamplAmount = userButtonTokenBalance.div('10000')
+    const amplAmount = wamplAmount.mul(5).div(BigNumber.from(10).pow(9))
 
     await expect(router.wamplBurnAndUnwrapAll(buttonToken.address))
       // 1. Transfer buttonTokens from user to router

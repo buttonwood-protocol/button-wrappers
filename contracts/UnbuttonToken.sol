@@ -194,12 +194,7 @@ contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
 
     /// @dev Internal method to commit deposit state.
     ///      NOTE: Expects uAmount, amount to be pre-calculated.
-    function _deposit(
-        address from,
-        address to,
-        uint256 uAmount,
-        uint256 amount
-    ) private {
+    function _deposit(address from, address to, uint256 uAmount, uint256 amount) private {
         require(amount > 0, "UnbuttonToken: too few unbutton tokens to mint");
 
         // Transfer underlying token from the initiator to the contract
@@ -211,12 +206,7 @@ contract UnbuttonToken is IButtonWrapper, ERC20PermitUpgradeable {
 
     /// @dev Internal method to commit deposit state.
     ///      NOTE: Expects uAmount, amount to be pre-calculated.
-    function _withdraw(
-        address from,
-        address to,
-        uint256 uAmount,
-        uint256 amount
-    ) private {
+    function _withdraw(address from, address to, uint256 uAmount, uint256 amount) private {
         require(amount > 0, "UnbuttonToken: too few unbutton tokens to burn");
 
         // Burn unbutton tokens from the initiator

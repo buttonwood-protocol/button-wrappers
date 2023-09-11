@@ -38,11 +38,10 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
      * @param amplAmount The amount of AMPL being deposited
      * @return The amount of ButtonTokens created
      */
-    function wamplWrapAndDeposit(IButtonToken buttonToken, uint256 amplAmount)
-        external
-        nonReentrant
-        returns (uint256)
-    {
+    function wamplWrapAndDeposit(
+        IButtonToken buttonToken,
+        uint256 amplAmount
+    ) external nonReentrant returns (uint256) {
         if (amplAmount == 0) revert ZeroAmount();
         if (buttonToken.underlying() != address(wampl)) revert InvalidButtonAsset();
         // Transfer ampl to router
@@ -64,11 +63,10 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
      * @param amount The amount of ButtonTokens to burn
      * @return The amount of ampl tokens returned
      */
-    function wamplBurnAndUnwrap(IButtonToken buttonToken, uint256 amount)
-        external
-        nonReentrant
-        returns (uint256)
-    {
+    function wamplBurnAndUnwrap(
+        IButtonToken buttonToken,
+        uint256 amount
+    ) external nonReentrant returns (uint256) {
         // Transfer buttonToken to router
         buttonToken.transferFrom(msg.sender, address(this), amount);
         // Burn buttonToken to wampl
@@ -84,11 +82,9 @@ contract ButtonTokenWamplRouter is ReentrancyGuard {
      * @param buttonToken the button token to burn from
      * @return The amount of ampl tokens returned
      */
-    function wamplBurnAndUnwrapAll(IButtonToken buttonToken)
-        external
-        nonReentrant
-        returns (uint256)
-    {
+    function wamplBurnAndUnwrapAll(
+        IButtonToken buttonToken
+    ) external nonReentrant returns (uint256) {
         // Transfer all buttonToken to router
         buttonToken.transferAllFrom(msg.sender, address(this));
         // Burn all buttonToken to wampl

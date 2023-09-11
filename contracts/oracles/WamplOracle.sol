@@ -53,12 +53,12 @@ contract WamplOracle is IOracle {
         uint256 ethUsdDiff = block.timestamp - ethUsdUpdatedAt;
         uint256 amplUsd = uint256(amplEth) * uint256(ethUsd);
         if (convertPriceByDecimals > 0) {
-            amplUsd = amplUsd / (10**uint256(convertPriceByDecimals));
+            amplUsd = amplUsd / (10 ** uint256(convertPriceByDecimals));
         } else if (convertPriceByDecimals < 0) {
-            amplUsd = amplUsd * (10**uint256(-convertPriceByDecimals));
+            amplUsd = amplUsd * (10 ** uint256(-convertPriceByDecimals));
         }
-        uint256 amplPerWampl = wampl.wrapperToUnderlying(10**wamplDecimals);
-        uint256 wamplUsd = (amplUsd * amplPerWampl) / (10**amplDecimals);
+        uint256 amplPerWampl = wampl.wrapperToUnderlying(10 ** wamplDecimals);
+        uint256 wamplUsd = (amplUsd * amplPerWampl) / (10 ** amplDecimals);
         return (
             wamplUsd,
             amplEthDiff <= stalenessThresholdSecs && ethUsdDiff <= stalenessThresholdSecs

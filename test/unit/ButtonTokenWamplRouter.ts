@@ -48,13 +48,7 @@ async function fixture(): Promise<TestContext> {
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
   const buttonToken = await buttonTokenFactory.deploy()
 
-  buttonToken.initialize(
-    wampl.address,
-    NAME,
-    SYMBOL,
-    mockOracle.address,
-    PRICE_DECIMALS,
-  )
+  buttonToken.initialize(wampl.address, NAME, SYMBOL, mockOracle.address)
 
   const routerFactory = await ethers.getContractFactory(
     'ButtonTokenWamplRouter',
@@ -150,7 +144,6 @@ describe('ButtonTokenWamplRouter', () => {
       'BAD-BUTTON',
       'BTTN-BAD',
       mockOracle.address,
-      PRICE_DECIMALS,
     )
 
     const depositAmount = ethers.utils.parseUnits('10', 9)

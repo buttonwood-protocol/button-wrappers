@@ -30,8 +30,12 @@ contract ButtonTokenFactory is InstanceRegistry, IFactory {
         string memory name;
         string memory symbol;
         address oracle;
-        (underlying, name, symbol, oracle) = abi.decode(args, (address, string, string, address));
-        return _create(underlying, name, symbol, oracle);
+        uint256 priceDecimals;
+        (underlying, name, symbol, oracle, priceDecimals) = abi.decode(
+            args,
+            (address, string, string, address, uint256)
+        );
+        return _create(underlying, name, symbol, oracle, priceDecimals);
     }
 
     /// @dev Create and initialize an instance of the button token
@@ -39,9 +43,10 @@ contract ButtonTokenFactory is InstanceRegistry, IFactory {
         address underlying,
         string memory name,
         string memory symbol,
-        address oracle
+        address oracle,
+        uint256 priceDecimals
     ) external returns (address) {
-        return _create(underlying, name, symbol, oracle);
+        return _create(underlying, name, symbol, oracle, priceDecimals);
     }
 
     /**
@@ -52,13 +57,14 @@ contract ButtonTokenFactory is InstanceRegistry, IFactory {
         address underlying,
         string memory name,
         string memory symbol,
-        address oracle
+        address oracle,
+        uint256 priceDecimals
     ) private returns (address) {
         // Create instance
         address buttonToken = Clones.clone(template);
 
         // Initialize instance
-        IButtonToken(buttonToken).initialize(underlying, name, symbol, oracle);
+        IButtonToken(buttonToken).initialize(underlying, name, symbol, oracle, priceDecimals);
 
         // Transfer ownership to msg.sender
         OwnableUpgradeable(buttonToken).transferOwnership(msg.sender);

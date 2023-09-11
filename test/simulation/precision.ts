@@ -137,7 +137,7 @@ async function exec() {
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
   buttonToken = await buttonTokenFactory.connect(deployer).deploy()
 
-  buttonToken.initialize(mockBTC.address, 'TEST', 'TEST', mockOracle.address)
+  buttonToken.initialize(mockBTC.address, 'TEST', 'TEST', mockOracle.address, PRICE_DECIMALS)
 
   await mockBTC
     .connect(deployer)

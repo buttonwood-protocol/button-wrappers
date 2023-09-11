@@ -31,7 +31,13 @@ async function fixture(): Promise<TestContext> {
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
   const buttonToken = await buttonTokenFactory.deploy()
 
-  buttonToken.initialize(weth.address, NAME, SYMBOL, mockOracle.address, PRICE_DECIMALS)
+  buttonToken.initialize(
+    weth.address,
+    NAME,
+    SYMBOL,
+    mockOracle.address,
+    PRICE_DECIMALS,
+  )
 
   const routerFactory = await ethers.getContractFactory('ButtonTokenWethRouter')
   const router = await routerFactory.deploy(weth.address)

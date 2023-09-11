@@ -56,13 +56,7 @@ async function setupContracts() {
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
   buttonToken = await buttonTokenFactory.connect(deployer).deploy()
 
-  buttonToken.initialize(
-    mockBTC.address,
-    NAME,
-    SYMBOL,
-    mockOracle.address,
-    PRICE_DECIMALS,
-  )
+  buttonToken.initialize(mockBTC.address, NAME, SYMBOL, mockOracle.address)
 }
 
 function eqAprox(x: BigNumber, y: BigNumberish, diff: BigNumberish = '1') {

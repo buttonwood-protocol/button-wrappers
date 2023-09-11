@@ -99,7 +99,7 @@ describe('WamplOracle', function () {
       // 1 WAMPL = ~5.9 AMPL, thus WamplOracle should return ~5.9e8
       expect(res.toString()).to.eq('592916430')
       expect(success).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('95823')
+      expect(receipt.gasUsed.toString()).to.equal('95845')
     })
 
     it('should fail with stale data', async function () {
@@ -139,7 +139,7 @@ describe('WamplOracle', function () {
 
       expect(res.toString()).to.eq('592916430')
       expect(success).to.eq(false)
-      expect(receipt.gasUsed.toString()).to.equal('75909')
+      expect(receipt.gasUsed.toString()).to.equal('75931')
     })
 
     it('handles different AMPL<->WAMPL conversion rates', async function () {
@@ -186,7 +186,7 @@ describe('WamplOracle', function () {
       // 1 WAMPL = ~5929 AMPL, thus WamplOracle should return ~5.9e11
       expect(res.toString()).to.eq('592916430444')
       expect(success).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('95823')
+      expect(receipt.gasUsed.toString()).to.equal('95845')
     })
 
     it('handles extreme oracle values', async function () {
@@ -228,7 +228,7 @@ describe('WamplOracle', function () {
       // The amplEth feed is non-zero but too small to remain so after scaled to 8 decimals
       expect(res.toString()).to.eq('0')
       expect(success).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('75923')
+      expect(receipt.gasUsed.toString()).to.equal('75945')
 
       // Set AMPL to be worth 1 ETH
       await expect(
@@ -249,7 +249,7 @@ describe('WamplOracle', function () {
       // There's just enough decimals to capture a non-zero value
       expect(res2.toString()).to.eq('5')
       expect(success2).to.eq(true)
-      expect(receipt2.gasUsed.toString()).to.equal('75923')
+      expect(receipt2.gasUsed.toString()).to.equal('75945')
     })
   })
 
@@ -319,6 +319,6 @@ describe('WamplOracle', function () {
     // 1 WAMPL = ~5.9 AMPL, thus WamplOracle should return ~5.9e8
     expect(res.toString()).to.eq('592916430')
     expect(success).to.eq(true)
-    expect(receipt.gasUsed.toString()).to.equal('95938')
+    expect(receipt.gasUsed.toString()).to.equal('95960')
   })
 })

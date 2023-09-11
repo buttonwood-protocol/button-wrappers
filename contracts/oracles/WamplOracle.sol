@@ -42,6 +42,14 @@ contract WamplOracle is IOracle {
     }
 
     /**
+     * @notice Fetches the number of decimals the price values are formatted to
+     * @return priceDecimals_: The number of decimals
+     */
+    function priceDecimals() external view override returns (uint256 priceDecimals_) {
+        priceDecimals_ = PRICE_DECIMALS;
+    }
+
+    /**
      * @notice Fetches the latest market price from chainlink
      * @return Value: Latest market price as an 8 decimal fixed point number.
      *         valid: Boolean indicating an value was fetched successfully.

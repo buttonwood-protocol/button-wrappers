@@ -20,8 +20,16 @@ contract ChainlinkOracle is IOracle {
     }
 
     /**
+     * @notice Fetches the number of decimals the price values are formatted to
+     * @return priceDecimals_: The number of decimals
+     */
+    function priceDecimals() external view override returns (uint256 priceDecimals_) {
+        priceDecimals_ = oracle.decimals();
+    }
+
+    /**
      * @notice Fetches the latest market price from chainlink
-     * @return Value: Latest market price as an 8 decimal fixed point number.
+     * @return Value: Latest market price.
      *         valid: Boolean indicating an value was fetched successfully.
      */
     function getData() external view override returns (uint256, bool) {

@@ -134,13 +134,11 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     /// @param name_ The ERC20 name.
     /// @param symbol_ The ERC20 symbol.
     /// @param oracle_ The oracle which provides the underlying token price.
-    /// @param priceDecimals_ The decimal point precision of the oracle price.
     function initialize(
         address underlying_,
         string memory name_,
         string memory symbol_,
-        address oracle_,
-        uint256 priceDecimals_
+        address oracle_
     ) public override initializer {
         require(underlying_ != address(0), "ButtonToken: invalid underlying reference");
 
@@ -149,8 +147,6 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         underlying = underlying_;
         name = name_;
         symbol = symbol_;
-        priceBits = BITS_PER_UNDERLYING * (10 ** priceDecimals_);
-        maxPrice = maxPriceFromPriceDecimals(priceDecimals_);
 
         // MAX_UNDERLYING worth bits are 'pre-mined' to `address(0x)`
         // at the time of construction.
@@ -175,6 +171,10 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         oracle = oracle_;
         (price, valid) = _queryPrice();
         require(valid, "ButtonToken: unable to fetch data from oracle");
+
+        uint256 priceDecimals = IOracle(oracle).priceDecimals();
+        priceBits = BITS_PER_UNDERLYING * (10 ** priceDecimals);
+        maxPrice = maxPriceFromPriceDecimals(priceDecimals);
 
         emit OracleUpdated(oracle);
         _rebase(price);

@@ -10,6 +10,10 @@ contract MockOracle is IOracle {
     uint256 private data;
     bool private success;
 
+    function priceDecimals() external view override returns (uint256 priceDecimals_) {
+        priceDecimals_ = 8;
+    }
+
     /**
      * Return mocked data returned by the oracle
      */

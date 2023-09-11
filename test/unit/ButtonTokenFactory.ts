@@ -30,11 +30,10 @@ async function createInstance(
   name: String,
   symbol: String,
   oracle: string,
-  priceDecimals: number,
 ) {
   const args = ethers.utils.defaultAbiCoder.encode(
-    ['address', 'string', 'string', 'address', 'uint256'],
-    [underlying, name, symbol, oracle, priceDecimals],
+    ['address', 'string', 'string', 'address'],
+    [underlying, name, symbol, oracle],
   )
   const instanceAddress = await factory.callStatic['create(bytes)'](args)
   await factory['create(bytes)'](args)
@@ -106,7 +105,6 @@ describe('ButtonToken:create', () => {
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS,
     )
 
     expect(await bToken.owner()).to.eq(deployerAddress)
@@ -119,7 +117,6 @@ describe('ButtonToken:create', () => {
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS,
     )
 
     expect(await bToken.underlying()).to.eq(mockBTC.address)
@@ -131,20 +128,13 @@ describe('ButtonToken:create', () => {
 
   it('Unpacked args should run with correct values', async function () {
     const instanceAddress = await factory.callStatic[
-      'create(address,string,string,address,uint256)'
-    ](
+      'create(address,string,string,address)'
+    ](mockBTC.address, 'BUTTON-Bitcoin', 'BUTTON-BTC', mockOracle.address)
+    await factory['create(address,string,string,address)'](
       mockBTC.address,
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS,
-    )
-    await factory['create(address,string,string,address,uint256)'](
-      mockBTC.address,
-      'BUTTON-Bitcoin',
-      'BUTTON-BTC',
-      mockOracle.address,
-      PRICE_DECIMALS,
     )
 
     const bToken = (await ethers.getContractFactory('ButtonToken'))
@@ -160,7 +150,6 @@ describe('ButtonToken:create', () => {
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS,
     )
 
     expect(await factory.instanceCount()).to.eq(1)
@@ -175,7 +164,6 @@ describe('ButtonToken:create', () => {
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS,
     )
 
     expect(await mockBTC.balanceOf(deployerAddress)).to.eq(

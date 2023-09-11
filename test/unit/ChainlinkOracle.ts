@@ -66,8 +66,7 @@ describe('ChainlinkOracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('78838')
-      expect(receipt.gasUsed.toString()).to.equal('78838')
+      expect(receipt.gasUsed.toString()).to.equal('78860')
     })
 
     it('should fail with stale data', async function () {
@@ -87,7 +86,7 @@ describe('ChainlinkOracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(false)
-      expect(receipt.gasUsed.toString()).to.equal('37038')
+      expect(receipt.gasUsed.toString()).to.equal('37060')
     })
   })
 })

@@ -19,10 +19,6 @@ contract ChainlinkOracle is IOracle {
         stalenessThresholdSecs = _stalenessThresholdSecs;
     }
 
-    /**
-     * @notice Fetches the number of decimals the price values are formatted to
-     * @return priceDecimals_: The number of decimals
-     */
     function priceDecimals() external view override returns (uint256 priceDecimals_) {
         priceDecimals_ = oracle.decimals();
     }

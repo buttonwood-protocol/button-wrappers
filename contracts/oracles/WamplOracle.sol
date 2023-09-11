@@ -41,10 +41,6 @@ contract WamplOracle is IOracle {
             int256(PRICE_DECIMALS);
     }
 
-    /**
-     * @notice Fetches the number of decimals the price values are formatted to
-     * @return priceDecimals_: The number of decimals
-     */
     function priceDecimals() external view override returns (uint256 priceDecimals_) {
         priceDecimals_ = PRICE_DECIMALS;
     }

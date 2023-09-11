@@ -17,12 +17,8 @@ const argsKovan = {
 
 task('deploy:WamplOracle:mainnet', 'Verifies on etherscan').setAction(
   async function (args: TaskArguments, hre) {
-    const {
-      amplEthOracle,
-      ethUsdOracle,
-      wampl,
-      stalenessThresholdSecs,
-    } = argsMainnet
+    const { amplEthOracle, ethUsdOracle, wampl, stalenessThresholdSecs } =
+      argsMainnet
     await hre.run('deploy:WamplOracle', {
       amplEthOracle,
       ethUsdOracle,
@@ -34,12 +30,8 @@ task('deploy:WamplOracle:mainnet', 'Verifies on etherscan').setAction(
 
 task('deploy:WamplOracle:kovan', 'Verifies on etherscan').setAction(
   async function (args: TaskArguments, hre) {
-    const {
-      amplEthOracle,
-      ethUsdOracle,
-      wampl,
-      stalenessThresholdSecs,
-    } = argsKovan
+    const { amplEthOracle, ethUsdOracle, wampl, stalenessThresholdSecs } =
+      argsKovan
     await hre.run('deploy:WamplOracle', {
       amplEthOracle,
       ethUsdOracle,
@@ -104,12 +96,8 @@ task('verify:WamplOracle:mainnet', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
     const { address } = args
-    const {
-      amplEthOracle,
-      ethUsdOracle,
-      wampl,
-      stalenessThresholdSecs,
-    } = argsMainnet
+    const { amplEthOracle, ethUsdOracle, wampl, stalenessThresholdSecs } =
+      argsMainnet
 
     await hre.run('verify:verify', {
       address,
@@ -126,12 +114,8 @@ task('verify:WamplOracle:kovan', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
     const { address } = args
-    const {
-      amplEthOracle,
-      ethUsdOracle,
-      wampl,
-      stalenessThresholdSecs,
-    } = argsKovan
+    const { amplEthOracle, ethUsdOracle, wampl, stalenessThresholdSecs } =
+      argsKovan
 
     await hre.run('verify:verify', {
       address,

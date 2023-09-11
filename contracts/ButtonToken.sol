@@ -149,7 +149,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         underlying = underlying_;
         name = name_;
         symbol = symbol_;
-        priceBits = BITS_PER_UNDERLYING * (10**priceDecimals_);
+        priceBits = BITS_PER_UNDERLYING * (10 ** priceDecimals_);
         maxPrice = maxPriceFromPriceDecimals(priceDecimals_);
 
         // MAX_UNDERLYING worth bits are 'pre-mined' to `address(0x)`
@@ -260,25 +260,18 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     // ERC-20 write methods
 
     /// @inheritdoc IERC20
-    function transfer(address to, uint256 amount)
-        external
-        override
-        validRecipient(to)
-        onAfterRebase
-        returns (bool)
-    {
+    function transfer(
+        address to,
+        uint256 amount
+    ) external override validRecipient(to) onAfterRebase returns (bool) {
         _transfer(_msgSender(), to, _amountToBits(amount, lastPrice), amount);
         return true;
     }
 
     /// @inheritdoc IRebasingERC20
-    function transferAll(address to)
-        external
-        override
-        validRecipient(to)
-        onAfterRebase
-        returns (bool)
-    {
+    function transferAll(
+        address to
+    ) external override validRecipient(to) onAfterRebase returns (bool) {
         uint256 bits = _accountBits[_msgSender()];
         _transfer(_msgSender(), to, bits, _bitsToAmount(bits, lastPrice));
         return true;
@@ -300,13 +293,10 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     }
 
     /// @inheritdoc IRebasingERC20
-    function transferAllFrom(address from, address to)
-        external
-        override
-        validRecipient(to)
-        onAfterRebase
-        returns (bool)
-    {
+    function transferAllFrom(
+        address from,
+        address to
+    ) external override validRecipient(to) onAfterRebase returns (bool) {
         uint256 bits = _accountBits[from];
         uint256 amount = _bitsToAmount(bits, lastPrice);
 
@@ -417,12 +407,10 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     }
 
     /// @inheritdoc IButtonWrapper
-    function depositFor(address to, uint256 uAmount)
-        external
-        override
-        onAfterRebase
-        returns (uint256)
-    {
+    function depositFor(
+        address to,
+        uint256 uAmount
+    ) external override onAfterRebase returns (uint256) {
         uint256 bits = _uAmountToBits(uAmount);
         uint256 amount = _bitsToAmount(bits, lastPrice);
         _deposit(_msgSender(), to, uAmount, amount, bits);
@@ -438,12 +426,10 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
     }
 
     /// @inheritdoc IButtonWrapper
-    function withdrawTo(address to, uint256 uAmount)
-        external
-        override
-        onAfterRebase
-        returns (uint256)
-    {
+    function withdrawTo(
+        address to,
+        uint256 uAmount
+    ) external override onAfterRebase returns (uint256) {
         uint256 bits = _uAmountToBits(uAmount);
         uint256 amount = _bitsToAmount(bits, lastPrice);
         _withdraw(_msgSender(), to, uAmount, amount, bits);
@@ -506,12 +492,7 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
 
     /// @dev Internal method to commit transfer state.
     ///      NOTE: Expects bits/amounts to be pre-calculated.
-    function _transfer(
-        address from,
-        address to,
-        uint256 bits,
-        uint256 amount
-    ) private {
+    function _transfer(address from, address to, uint256 bits, uint256 amount) private {
         _accountBits[from] -= bits;
         _accountBits[to] += bits;
 
@@ -584,60 +565,60 @@ contract ButtonToken is IButtonToken, Initializable, OwnableUpgradeable {
         require(priceDecimals <= 18, "ButtonToken: Price Decimals must be under 18");
         // Given that 18,8,6 are the most common price decimals, we optimize for those cases
         if (priceDecimals == 18) {
-            return 2**113 - 1;
+            return 2 ** 113 - 1;
         }
         if (priceDecimals == 8) {
-            return 2**96 - 1;
+            return 2 ** 96 - 1;
         }
         if (priceDecimals == 6) {
-            return 2**93 - 1;
+            return 2 ** 93 - 1;
         }
         if (priceDecimals == 0) {
-            return 2**83 - 1;
+            return 2 ** 83 - 1;
         }
         if (priceDecimals == 1) {
-            return 2**84 - 1;
+            return 2 ** 84 - 1;
         }
         if (priceDecimals == 2) {
-            return 2**86 - 1;
+            return 2 ** 86 - 1;
         }
         if (priceDecimals == 3) {
-            return 2**88 - 1;
+            return 2 ** 88 - 1;
         }
         if (priceDecimals == 4) {
-            return 2**89 - 1;
+            return 2 ** 89 - 1;
         }
         if (priceDecimals == 5) {
-            return 2**91 - 1;
+            return 2 ** 91 - 1;
         }
         if (priceDecimals == 7) {
-            return 2**94 - 1;
+            return 2 ** 94 - 1;
         }
         if (priceDecimals == 9) {
-            return 2**98 - 1;
+            return 2 ** 98 - 1;
         }
         if (priceDecimals == 10) {
-            return 2**99 - 1;
+            return 2 ** 99 - 1;
         }
         if (priceDecimals == 11) {
-            return 2**101 - 1;
+            return 2 ** 101 - 1;
         }
         if (priceDecimals == 12) {
-            return 2**103 - 1;
+            return 2 ** 103 - 1;
         }
         if (priceDecimals == 13) {
-            return 2**104 - 1;
+            return 2 ** 104 - 1;
         }
         if (priceDecimals == 14) {
-            return 2**106 - 1;
+            return 2 ** 106 - 1;
         }
         if (priceDecimals == 15) {
-            return 2**108 - 1;
+            return 2 ** 108 - 1;
         }
         if (priceDecimals == 16) {
-            return 2**109 - 1;
+            return 2 ** 109 - 1;
         }
         // priceDecimals == 17
-        return 2**111 - 1;
+        return 2 ** 111 - 1;
     }
 }

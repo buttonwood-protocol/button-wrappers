@@ -20,21 +20,21 @@ export default {
     },
     customChains: [
       {
-        network: "base-mainnet",
+        network: 'base-mainnet',
         chainId: 8453,
         urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org"
-        }
+          apiURL: 'https://api.basescan.org/api',
+          browserURL: 'https://basescan.org',
+        },
       },
       {
-        network: "base-goerli",
+        network: 'base-goerli',
         chainId: 84531,
         urls: {
-          apiURL: "https://api-goerli.basescan.org/api",
-          browserURL: "https://goerli.basescan.org"
-        }
-      }
+          apiURL: 'https://api-goerli.basescan.org/api',
+          browserURL: 'https://goerli.basescan.org',
+        },
+      },
     ],
   },
   networks: {
@@ -75,8 +75,8 @@ export default {
       accounts: process.env.PROD_PKEY
         ? [process.env.PROD_PKEY]
         : {
-          mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
-        },
+            mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
+          },
       gasPrice: 1000000000,
     },
     'base-goerli': {
@@ -84,8 +84,8 @@ export default {
       accounts: process.env.DEV_PKEY
         ? [process.env.DEV_PKEY]
         : {
-          mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
-        },
+            mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+          },
       gasPrice: 1000000000,
     },
   },

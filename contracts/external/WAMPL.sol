@@ -33,7 +33,7 @@ contract WAMPL is ERC20Upgradeable, ERC20PermitUpgradeable {
     // Constants
 
     /// @dev The maximum wAMPL supply.
-    uint256 public constant MAX_WAMPL_SUPPLY = 10000000 * (10**18); // 10 M
+    uint256 public constant MAX_WAMPL_SUPPLY = 10000000 * (10 ** 18); // 10 M
 
     //--------------------------------------------------------------------------
     // Attributes
@@ -231,12 +231,7 @@ contract WAMPL is ERC20Upgradeable, ERC20PermitUpgradeable {
     /// @param to The beneficiary wallet.
     /// @param amples The amount of AMPLs to deposit.
     /// @param wamples The amount of wAMPLs to mint.
-    function _deposit(
-        address from,
-        address to,
-        uint256 amples,
-        uint256 wamples
-    ) private {
+    function _deposit(address from, address to, uint256 amples, uint256 wamples) private {
         IERC20Upgradeable(_ampl).safeTransferFrom(from, address(this), amples);
 
         _mint(to, wamples);
@@ -247,12 +242,7 @@ contract WAMPL is ERC20Upgradeable, ERC20PermitUpgradeable {
     /// @param to The beneficiary wallet.
     /// @param amples The amount of AMPLs to withdraw.
     /// @param wamples The amount of wAMPLs to burn.
-    function _withdraw(
-        address from,
-        address to,
-        uint256 amples,
-        uint256 wamples
-    ) private {
+    function _withdraw(address from, address to, uint256 amples, uint256 wamples) private {
         _burn(from, wamples);
 
         IERC20Upgradeable(_ampl).safeTransfer(to, amples);
@@ -268,20 +258,18 @@ contract WAMPL is ERC20Upgradeable, ERC20PermitUpgradeable {
     // Pure methods
 
     /// @dev Converts AMPLs to wAMPL amount.
-    function _ampleToWample(uint256 amples, uint256 totalAMPLSupply)
-    private
-    pure
-    returns (uint256)
-    {
+    function _ampleToWample(
+        uint256 amples,
+        uint256 totalAMPLSupply
+    ) private pure returns (uint256) {
         return (amples * MAX_WAMPL_SUPPLY) / totalAMPLSupply;
     }
 
     /// @dev Converts wAMPLs amount to AMPLs.
-    function _wampleToAmple(uint256 wamples, uint256 totalAMPLSupply)
-    private
-    pure
-    returns (uint256)
-    {
+    function _wampleToAmple(
+        uint256 wamples,
+        uint256 totalAMPLSupply
+    ) private pure returns (uint256) {
         return (wamples * totalAMPLSupply) / MAX_WAMPL_SUPPLY;
     }
 }

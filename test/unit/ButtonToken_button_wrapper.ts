@@ -44,7 +44,13 @@ async function setupContracts() {
   const buttonTokenFactory = await ethers.getContractFactory('ButtonToken')
   buttonToken = await buttonTokenFactory.connect(deployer).deploy()
 
-  buttonToken.initialize(mockBTC.address, NAME, SYMBOL, mockOracle.address, PRICE_DECIMALS)
+  buttonToken.initialize(
+    mockBTC.address,
+    NAME,
+    SYMBOL,
+    mockOracle.address,
+    PRICE_DECIMALS,
+  )
 }
 
 describe('ButtonToken:underlying', async () => {
@@ -681,6 +687,8 @@ describe('ButtonToken:mint', async () => {
   it('should not be able to mint tiny amounts with 0 uAmount', async function () {
     await setupContracts()
 
-    await expect(buttonToken.connect(userA).mint(toFixedPtAmt('0.000000000000000001'))).to.be.reverted
+    await expect(
+      buttonToken.connect(userA).mint(toFixedPtAmt('0.000000000000000001')),
+    ).to.be.reverted
   })
 })

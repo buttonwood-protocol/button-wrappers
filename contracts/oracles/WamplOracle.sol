@@ -41,8 +41,12 @@ contract WamplOracle is IOracle {
             int256(PRICE_DECIMALS);
     }
 
-    function priceDecimals() external view override returns (uint256 priceDecimals_) {
-        priceDecimals_ = PRICE_DECIMALS;
+    /**
+     * @notice Fetches the decimal precision used in the market price from chainlink
+     * @return priceDecimals_: Number of decimals in the price
+     */
+    function priceDecimals() external view override returns (uint256) {
+        return PRICE_DECIMALS;
     }
 
     /**

@@ -106,7 +106,7 @@ describe('ButtonToken:create', () => {
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS
+      PRICE_DECIMALS,
     )
 
     expect(await bToken.owner()).to.eq(deployerAddress)
@@ -119,7 +119,7 @@ describe('ButtonToken:create', () => {
       'BUTTON-Bitcoin',
       'BUTTON-BTC',
       mockOracle.address,
-      PRICE_DECIMALS
+      PRICE_DECIMALS,
     )
 
     expect(await bToken.underlying()).to.eq(mockBTC.address)
@@ -132,7 +132,13 @@ describe('ButtonToken:create', () => {
   it('Unpacked args should run with correct values', async function () {
     const instanceAddress = await factory.callStatic[
       'create(address,string,string,address,uint256)'
-    ](mockBTC.address, 'BUTTON-Bitcoin', 'BUTTON-BTC', mockOracle.address, PRICE_DECIMALS)
+    ](
+      mockBTC.address,
+      'BUTTON-Bitcoin',
+      'BUTTON-BTC',
+      mockOracle.address,
+      PRICE_DECIMALS,
+    )
     await factory['create(address,string,string,address,uint256)'](
       mockBTC.address,
       'BUTTON-Bitcoin',

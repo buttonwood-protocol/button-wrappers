@@ -13,7 +13,7 @@ contract MockSAVAX {
         totalPooledAvax = totalPooledAvax_;
     }
 
-    function getSharesByPooledAvax(uint avaxAmount) external view returns (uint){
+    function getSharesByPooledAvax(uint avaxAmount) external view returns (uint) {
         if (totalPooledAvax == 0) {
             return 0;
         }
@@ -24,7 +24,7 @@ contract MockSAVAX {
         return shares;
     }
 
-    function getPooledAvaxByShares(uint shareAmount) external view returns (uint){
+    function getPooledAvaxByShares(uint shareAmount) external view returns (uint) {
         if (totalShares == 0) {
             return 0;
         }

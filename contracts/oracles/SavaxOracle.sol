@@ -36,9 +36,6 @@ contract SavaxOracle is IOracle {
      *         valid: Boolean indicating an value was fetched successfully.
      */
     function getData() external view override returns (uint256, bool) {
-        return (
-            savax.getPooledAvaxByShares(10 ** PRICE_DECIMALS),
-            true
-        );
+        return (savax.getPooledAvaxByShares(10 ** PRICE_DECIMALS), true);
     }
 }

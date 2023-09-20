@@ -1,13 +1,11 @@
-import {expect} from 'chai'
-import {BigNumber} from 'ethers'
-import {ethers, waffle} from 'hardhat'
+import { expect } from 'chai'
+import { BigNumber } from 'ethers'
+import { ethers, waffle } from 'hardhat'
 
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockSavax = await (
-    await ethers.getContractFactory('MockSAVAX')
-  )
+  const mockSavax = await (await ethers.getContractFactory('MockSAVAX'))
     .connect(deployer)
     .deploy()
   // deploy contract to test
@@ -33,19 +31,16 @@ async function mockedOracle() {
 describe('SavaxOracle', function () {
   describe('when sent ether', async function () {
     it('should reject', async function () {
-      const {user, oracle} = await waffle.loadFixture(mockedOracle)
-      await expect(user.sendTransaction({to: oracle.address, value: 1})).to.be
+      const { user, oracle } = await waffle.loadFixture(mockedOracle)
+      await expect(user.sendTransaction({ to: oracle.address, value: 1 })).to.be
         .reverted
     })
   })
 
   describe('Fetching data', async function () {
     it('should succeed with fresh data', async function () {
-      const {
-        user,
-        mockSavax,
-        mockOracleDataFetcher,
-      } = await waffle.loadFixture(mockedOracle)
+      const { user, mockSavax, mockOracleDataFetcher } =
+        await waffle.loadFixture(mockedOracle)
 
       await expect(
         mockSavax

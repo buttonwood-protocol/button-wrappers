@@ -23,7 +23,7 @@ contract SavaxOracle is IOracle {
      * @notice Fetches the decimal precision used in the market price from chainlink
      * @return priceDecimals_: Number of decimals in the price
      */
-    function priceDecimals() external view override returns (uint256) {
+    function priceDecimals() external pure override returns (uint256) {
         return PRICE_DECIMALS;
     }
 

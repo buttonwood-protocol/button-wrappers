@@ -1,5 +1,5 @@
 import { task, types } from 'hardhat/config'
-import { TaskArguments } from 'hardhat/types'
+import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types'
 
 const argsAvalanche = {
   savax: '0x2b2C81e08f1Af8835a78Bb2A90AE924ACE0eA4bE',
@@ -9,24 +9,27 @@ const argsFuji = {
   savax: '0x0',
 }
 
-task('deploy:SavaxOracle:avalanche', 'Verifies on snowtrace').setAction(
+task('deploy:SavaxOracle:prefilled', 'Verifies on snowtrace').setAction(
   async function (args: TaskArguments, hre) {
-    const { savax } = argsAvalanche
-    await hre.run('deploy:SavaxOracle', { savax })
-  },
-)
-
-task('deploy:SavaxOracle:fuji', 'Verifies on snowtrace').setAction(
-  async function (args: TaskArguments, hre) {
-    const { savax } = argsFuji
+    console.log('chainId:', hre.network.config.chainId)
+    console.log('Network:', hre.network.name)
+    if (hre.network.name === 'fuji') {
+      args = argsFuji
+    } else if (hre.network.name === 'avalanche') {
+      args = argsAvalanche
+    } else {
+      throw new Error('Network not supported')
+    }
+    const { savax } = args
+    console.log('Savax Address:', savax)
     await hre.run('deploy:SavaxOracle', { savax })
   },
 )
 
 task('deploy:SavaxOracle')
   .addParam('savax', 'the sAVAX token address', undefined, types.string, false)
-  .setAction(async function (_args: TaskArguments, hre) {
-    const { savax } = _args
+  .setAction(async function (args: TaskArguments, hre) {
+    const { savax } = args
     console.log('Signer', await (await hre.ethers.getSigners())[0].getAddress())
     const SavaxOracle = await hre.ethers.getContractFactory('SavaxOracle')
     const savaxOracle = await SavaxOracle.deploy(savax)
@@ -43,29 +46,27 @@ task('deploy:SavaxOracle')
     }
   })
 
-task('verify:SavaxOracle:avalanche', 'Verifies on snowtrace')
+task('verify:SavaxOracle:prefilled', 'Verifies on snowtrace')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
+    console.log('chainId:', hre.network.config.chainId)
+    console.log('Network:', hre.network.name)
+    let savax;
+    if (hre.network.name === 'fuji') {
+      savax = argsFuji.savax;
+    } else if (hre.network.name === 'avalanche') {
+      savax = argsAvalanche.savax;
+    } else {
+      throw new Error('Network not supported')
+    }
     const { address } = args
-    const { savax } = argsAvalanche
 
     await hre.run('verify:verify', {
       address,
       constructorArguments: [savax],
     })
-  })
-
-task('verify:SavaxOracle:fuji', 'Verifies on snowtrace')
-  .addParam('address', 'the contract address', undefined, types.string, false)
-  .setAction(async function (args: TaskArguments, hre) {
-    const { address } = args
-    const { savax } = argsFuji
-
-    await hre.run('verify:verify', {
-      address,
-      constructorArguments: [savax],
-    })
-  })
+  },
+)
 
 task('verify:SavaxOracle', 'Verifies on snowtrace')
   .addParam('address', 'the contract address', undefined, types.string, false)

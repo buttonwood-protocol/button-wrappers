@@ -17,6 +17,8 @@ export default {
       mainnet: process.env.ETHERSCAN_API_KEY,
       'base-goerli': process.env.BASE_API_KEY,
       'base-mainnet': process.env.BASE_API_KEY,
+      avalanche: process.env.SNOWTRACE_API_KEY,
+      fuji: process.env.SNOWTRACE_API_KEY,
     },
     customChains: [
       {
@@ -87,6 +89,26 @@ export default {
             mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
           },
       gasPrice: 1000000000,
+    },
+    fuji: {
+      url: 'https://api.avax-test.network/ext/bc/C/rpc',
+      accounts: process.env.AVAX_DEV_PKEY
+        ? [process.env.AVAX_DEV_PKEY]
+        : {
+            mnemonic: process.env.DEV_MNEMONIC || DEFAULT_MNEMONIC,
+          },
+      gasPrice: 225000000000,
+      chainId: 43113,
+    },
+    avalanche: {
+      url: 'https://api.avax.network/ext/bc/C/rpc',
+      accounts: process.env.AVAX_PROD_PKEY
+        ? [process.env.AVAX_PROD_PKEY]
+        : {
+            mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
+          },
+      gasPrice: 225000000000,
+      chainId: 43114,
     },
   },
   solidity: {

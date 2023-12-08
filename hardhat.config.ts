@@ -15,6 +15,7 @@ export default {
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY,
+      goerli: process.env.ETHERSCAN_API_KEY,
       'base-goerli': process.env.BASE_API_KEY,
       'base-mainnet': process.env.BASE_API_KEY,
       avalanche: process.env.SNOWTRACE_API_KEY,

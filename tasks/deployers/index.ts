@@ -1,3 +1,4 @@
+import './ankrETHOracle';
 import './button';
 import './ethxOracle';
 import './wethRouter';

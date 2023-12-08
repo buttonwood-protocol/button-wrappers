@@ -8,6 +8,7 @@ import './mockERC20';
 import './mockOracle';
 import './savaxOracle';
 import './swETHOracle';
+import './sDaiOracle';
 import './unbutton';
 import './ButtonTokenWethRouter';
 import './ButtonTokenWamplRouter';

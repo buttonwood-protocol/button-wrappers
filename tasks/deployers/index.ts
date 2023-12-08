@@ -3,6 +3,7 @@ import './button';
 import './ethxOracle';
 import './wethRouter';
 import './wamplOracle';
+import './mevEthOracle';
 import './mockERC20';
 import './mockOracle';
 import './savaxOracle';

@@ -1,6 +1,7 @@
 import './ankrETHOracle';
 import './button';
 import './ethxOracle';
+import './ggAVAXOracle';
 import './wethRouter';
 import './wamplOracle';
 import './mevEthOracle';

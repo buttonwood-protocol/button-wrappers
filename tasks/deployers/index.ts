@@ -12,3 +12,4 @@ import './sDaiOracle';
 import './unbutton';
 import './ButtonTokenWethRouter';
 import './ButtonTokenWamplRouter';
+import './yyAVAXOracle';

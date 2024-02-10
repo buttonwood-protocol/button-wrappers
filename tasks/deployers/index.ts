@@ -11,6 +11,7 @@ import './savaxOracle';
 import './swETHOracle';
 import './sDaiOracle';
 import './unbutton';
+import './uniETHOracle';
 import './ButtonTokenWethRouter';
 import './ButtonTokenWamplRouter';
 import './yyAVAXOracle';

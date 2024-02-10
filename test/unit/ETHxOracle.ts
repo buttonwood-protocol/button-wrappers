@@ -57,7 +57,7 @@ describe('ETHxOracle', function () {
       const receipt = await tx.wait()
       const [value, valid] = await mockOracleDataFetcher.getData()
 
-      // swETH denominated in ETH should be totalETH/totalSwETH
+      // ETHx denominated in ETH should be setTotalETHBalance/setTotalETHXSupply
       expect(value.toString()).to.eq('1105804502698871756')
       expect(valid).to.eq(true)
       expect(receipt.gasUsed.toString()).to.equal('78935')

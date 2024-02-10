@@ -17,12 +17,12 @@ contract MockRockXStaking is IRockXStaking {
         reserveETH = reserveETH_;
     }
 
-    function exchangeRatio() override external view returns (uint256) {
+    function exchangeRatio() external view override returns (uint256) {
         if (xETHAmount == 0) {
             return 1 * MULTIPLIER;
         }
 
-        uint256 ratio = reserveETH * MULTIPLIER / xETHAmount;
+        uint256 ratio = (reserveETH * MULTIPLIER) / xETHAmount;
         return ratio;
     }
 }

@@ -2,6 +2,8 @@
 
 // solhint-disable-next-line
 /// @dev https://github.com/inceptionlrt/smart-contracts/blob/master/contracts/interfaces/IInceptionVault.sol
+// solhint-disable-next-line
+/// @dev https://github.com/inceptionlrt/smart-contracts/blob/master/contracts/Inception/vaults/InceptionVault.sol#L222-L232
 interface IInceptionVault {
     function ratio() external view returns (uint256);
 

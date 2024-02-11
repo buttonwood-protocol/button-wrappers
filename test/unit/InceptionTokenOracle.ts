@@ -58,9 +58,9 @@ describe('InceptionTokenOracle', function () {
       const [value, valid] = await mockOracleDataFetcher.getData()
 
       // uniETH denominated in ETH should be ETHReserve/XETHAmount
-      expect(value.toString()).to.eq('1105804502698871756')
+      expect(value.toString()).to.be.closeTo(BigNumber.from('1105804502698871756'),BigNumber.from('1'))
       expect(valid).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('81744')
+      expect(receipt.gasUsed.toString()).to.equal('82168')
     })
 
     it('should return 1:1 when inceptionToken-eth is empty', async function () {
@@ -85,7 +85,7 @@ describe('InceptionTokenOracle', function () {
       // uniETH denominated in ETH should be ETHReserve/XETHAmount
       expect(value.toString()).to.eq('1000000000000000000')
       expect(valid).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('78905')
+      expect(receipt.gasUsed.toString()).to.equal('79333')
     })
   })
 })

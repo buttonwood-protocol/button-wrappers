@@ -40,7 +40,6 @@ contract InceptionTokenOracle is IOracle {
      *         valid: Boolean indicating an value was fetched successfully.
      */
     function getData() external view override returns (uint256, bool) {
-        uint256 ratio = inceptionVault.ratio();
-        return (((10 ** 36) + (ratio / 2)) / ratio, true);
+        return (inceptionVault.convertToAssets(1e18), true);
     }
 }

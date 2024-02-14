@@ -4,10 +4,10 @@ import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types'
 const prefilledArgs: Record<string, TaskArguments> = {
   'mainnet': {
     steth: {
-      inceptionVault: '0x814CC6B8fd2555845541FB843f37418b05977d8d',
+      inceptionvault: '0x814CC6B8fd2555845541FB843f37418b05977d8d',
     },
     ankreth: {
-      inceptionVault: '0x36B429439AB227fAB170A4dFb3321741c8815e55',
+      inceptionvault: '0x36B429439AB227fAB170A4dFb3321741c8815e55',
     }
   },
   'goerli': {

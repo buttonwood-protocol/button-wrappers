@@ -2,6 +2,7 @@ import './ankrETHOracle';
 import './button';
 import './ethxOracle';
 import './ggAVAXOracle';
+import './inceptionTokenOracle';
 import './wethRouter';
 import './wamplOracle';
 import './mevEthOracle';

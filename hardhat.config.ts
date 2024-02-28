@@ -20,6 +20,7 @@ export default {
       'base-mainnet': process.env.BASE_API_KEY,
       avalanche: process.env.SNOWTRACE_API_KEY,
       fuji: process.env.SNOWTRACE_API_KEY,
+      arbitrumOne: process.env.ARBISCAN_API_KEY,
     },
     customChains: [
       {
@@ -110,6 +111,15 @@ export default {
           },
       gasPrice: 225000000000,
       chainId: 43114,
+    },
+    arbitrum: {
+      url: 'https://arb1.arbitrum.io/rpc',
+      accounts: process.env.ARB_PROD_PKEY
+        ? [process.env.ARB_PROD_PKEY]
+        : {
+          mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
+        },
+      chainId: 42161,
     },
   },
   solidity: {

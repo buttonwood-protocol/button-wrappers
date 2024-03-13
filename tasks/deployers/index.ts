@@ -8,6 +8,7 @@ import './wamplOracle';
 import './mevEthOracle';
 import './mockERC20';
 import './mockOracle';
+import './rsETHOracle';
 import './savaxOracle';
 import './swETHOracle';
 import './sDaiOracle';

@@ -3,10 +3,10 @@ import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types'
 
 const prefilledArgs: Record<string, TaskArguments> = {
   'arbitrum': {
-    rseth: '0x24Ae2dA0f361AA4BE46b48EB19C91e02c5e4f27E',
+    rsethratereceiver: '0x24Ae2dA0f361AA4BE46b48EB19C91e02c5e4f27E',
   },
   'goerli': {
-    rseth: '0x',
+    rsethratereceiver: '0x',
   }
 }
 
@@ -19,9 +19,9 @@ task('deploy:RSETHRateReceiverOracle:prefilled', 'Verifies on etherscan').setAct
       throw new Error('Network not supported')
     }
 
-    const { rseth } = prefilled;
-    console.log('Rseth Address:', rseth)
-    await hre.run('deploy:RSETHRateReceiverOracle', { rseth })
+    const { rsethratereceiver } = prefilled;
+    console.log('RSETHRateReceiver Address:', rsethratereceiver)
+    await hre.run('deploy:RSETHRateReceiverOracle', { rsethratereceiver })
   },
 )
 
@@ -55,13 +55,13 @@ task('verify:RSETHRateReceiverOracle:prefilled', 'Verifies on etherscan')
     if (!prefilled) {
       throw new Error('Network not supported');
     }
-    const { rseth } = prefilled;
+    const { rsethratereceiver } = prefilled;
 
     const { address } = args;
 
     await hre.run('verify:verify', {
       address,
-      constructorArguments: [rseth],
+      constructorArguments: [rsethratereceiver],
     })
   },
 )

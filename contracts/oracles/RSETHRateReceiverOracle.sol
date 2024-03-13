@@ -2,21 +2,21 @@
 pragma solidity 0.8.4;
 
 import {IOracle} from "../interfaces/IOracle.sol";
-import {ICrossChainRateReceiver} from "../interfaces/ICrossChainRateReceiver.sol";
+import {IRSETHRateReceiver} from "../interfaces/IRSETHRateReceiver.sol";
 
 /**
- * @title rsETH Oracle
+ * @title RSETHRateReceiver Oracle
  *
  * @notice Provides a rsETH:ETH rate for a button wrapper to use
  */
-contract RsETHOracle is IOracle {
+contract RSETHRateReceiverOracle is IOracle {
     /// @dev The output price has a 18 decimal point precision.
     uint256 public constant PRICE_DECIMALS = 18;
-    // The address of the CrossChainRateReceiver contract
-    ICrossChainRateReceiver public immutable crossChainRateReceiver;
+    // The address of the RSETHRateReceiver contract
+    IRSETHRateReceiver public immutable rsethRateReceiver;
 
-    constructor(ICrossChainRateReceiver crossChainRateReceiver_) {
-        crossChainRateReceiver = crossChainRateReceiver_;
+    constructor(IRSETHRateReceiver rsethRateReceiver_) {
+        rsethRateReceiver = rsethRateReceiver_;
     }
 
     /**
@@ -28,14 +28,14 @@ contract RsETHOracle is IOracle {
     }
 
     /**
-     * @notice Fetches the latest sAVAX:AVAX exchange rate from sAVAX contract.
-     * The returned value is specifically how much AVAX is represented by 1e18 raw units of sAVAX.
+     * @notice Fetches the latest rsETH:ETH exchange rate from RSETHRateReceiver contract.
+     * The returned value is specifically how much ETH is represented by 1e18 raw units of rsETH.
      * @dev The returned value is considered to be always valid since it is derived directly from
      *   the source token.
      * @return Value: Latest market price as an `priceDecimals` decimal fixed point number.
      *         valid: Boolean indicating an value was fetched successfully.
      */
     function getData() external view override returns (uint256, bool) {
-        return (crossChainRateReceiver.getRate(), true);
+        return (rsethRateReceiver.getRate(), true);
     }
 }

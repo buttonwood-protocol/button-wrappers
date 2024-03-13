@@ -5,13 +5,13 @@ import { ethers, waffle } from 'hardhat'
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockCrossChainRateReceiver = await (await ethers.getContractFactory('MockCrossChainRateReceiver'))
+  const mockRSETHRateReceiver = await (await ethers.getContractFactory('MockRSETHRateReceiver'))
     .connect(deployer)
     .deploy()
   // deploy contract to test
-  const oracle = await (await ethers.getContractFactory('RsETHOracle'))
+  const oracle = await (await ethers.getContractFactory('RSETHRateReceiverOracle'))
     .connect(deployer)
-    .deploy(mockCrossChainRateReceiver.address)
+    .deploy(mockRSETHRateReceiver.address)
   // need a contract with a non-view method that calls oracle.getData so we can gas test
   const mockOracleDataFetcher = await (
     await ethers.getContractFactory('MockOracleDataFetcher')
@@ -22,13 +22,13 @@ async function mockedOracle() {
   return {
     deployer,
     user,
-    mockCrossChainRateReceiver,
+    mockRSETHRateReceiver,
     oracle,
     mockOracleDataFetcher,
   }
 }
 
-describe('RsETHOracle', function () {
+describe('RSETHRateReceiverOracle', function () {
   describe('when sent ether', async function () {
     it('should reject', async function () {
       const { user, oracle } = await waffle.loadFixture(mockedOracle)
@@ -39,11 +39,11 @@ describe('RsETHOracle', function () {
 
   describe('Fetching data', async function () {
     it('should succeed with fresh data', async function () {
-      const { user, mockCrossChainRateReceiver, mockOracleDataFetcher } =
+      const { user, mockRSETHRateReceiver, mockOracleDataFetcher } =
         await waffle.loadFixture(mockedOracle)
 
       await expect(
-        mockCrossChainRateReceiver
+        mockRSETHRateReceiver
           .connect(user)
           .setRate(
             BigNumber.from('7091831834635293267033248')

@@ -10,7 +10,7 @@ const prefilledArgs: Record<string, TaskArguments> = {
   }
 }
 
-task('deploy:RsETHOracle:prefilled', 'Verifies on etherscan').setAction(
+task('deploy:RSETHRateReceiverOracle:prefilled', 'Verifies on etherscan').setAction(
   async function (args: TaskArguments, hre) {
     console.log('chainId:', hre.network.config.chainId);
     console.log('Network:', hre.network.name);
@@ -21,31 +21,31 @@ task('deploy:RsETHOracle:prefilled', 'Verifies on etherscan').setAction(
 
     const { rseth } = prefilled;
     console.log('Rseth Address:', rseth)
-    await hre.run('deploy:RsETHOracle', { rseth })
+    await hre.run('deploy:RSETHRateReceiverOracle', { rseth })
   },
 )
 
-task('deploy:RsETHOracle')
-  .addParam('rseth', 'the rsETH token address', undefined, types.string, false)
+task('deploy:RSETHRateReceiverOracle')
+  .addParam('rsethratereceiver', 'the RSETHRateReceiver address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
-    const { rseth } = args;
+    const { rsethratereceiver } = args;
     console.log('Signer', await (await hre.ethers.getSigners())[0].getAddress());
-    const RsETHOracle = await hre.ethers.getContractFactory('RsETHOracle');
-    const rsETHOracle = await RsETHOracle.deploy(rseth);
-    await rsETHOracle.deployed();
-    console.log(`RsETHOracle deployed to ${rsETHOracle.address}`);
+    const RSETHRateReceiverOracle = await hre.ethers.getContractFactory('RSETHRateReceiverOracle');
+    const rSETHRateReceiverOracle = await RSETHRateReceiverOracle.deploy(rsethratereceiver);
+    await rSETHRateReceiverOracle.deployed();
+    console.log(`RSETHRateReceiverOracle deployed to ${rSETHRateReceiverOracle.address}`);
 
     try {
       await hre.run('verify:verify', {
-        address: rsETHOracle.address,
-        constructorArguments: [rseth],
+        address: rSETHRateReceiverOracle.address,
+        constructorArguments: [rsethratereceiver],
       })
     } catch (e) {
       console.log('Unable to verify on etherscan', e)
     }
   })
 
-task('verify:RsETHOracle:prefilled', 'Verifies on etherscan')
+task('verify:RSETHRateReceiverOracle:prefilled', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
     console.log('chainId:', hre.network.config.chainId);
@@ -66,14 +66,14 @@ task('verify:RsETHOracle:prefilled', 'Verifies on etherscan')
   },
 )
 
-task('verify:RsETHOracle', 'Verifies on etherscan')
+task('verify:RSETHRateReceiverOracle', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
-  .addParam('rseth', 'the rsETH token address', undefined, types.string, false)
+  .addParam('rsethratereceiver', 'the RSETHRateReceiver address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
-    const { address, rseth } = args
+    const { address, rsethratereceiver } = args
 
     await hre.run('verify:verify', {
       address,
-      constructorArguments: [rseth],
+      constructorArguments: [rsethratereceiver],
     })
   })

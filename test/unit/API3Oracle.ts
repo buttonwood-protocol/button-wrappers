@@ -10,9 +10,7 @@ let deployer: Signer, user: Signer
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockDapiProxy = await (
-    await ethers.getContractFactory('MockDapiProxy')
-  )
+  const mockDapiProxy = await (await ethers.getContractFactory('MockDapiProxy'))
     .connect(deployer)
     .deploy()
   const oracle = await (await ethers.getContractFactory('API3Oracle'))
@@ -66,7 +64,7 @@ describe('API3Oracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(true)
-      expect(receipt.gasUsed.toString()).to.equal('76535')
+      expect(receipt.gasUsed.toString()).to.equal('76533')
     })
 
     it('should fail with stale data', async function () {
@@ -86,7 +84,7 @@ describe('API3Oracle', function () {
 
       expect(res.toString()).to.eq(data.toString())
       expect(success).to.eq(false)
-      expect(receipt.gasUsed.toString()).to.equal('34735')
+      expect(receipt.gasUsed.toString()).to.equal('34733')
     })
   })
 })

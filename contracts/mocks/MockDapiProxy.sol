@@ -12,7 +12,7 @@ contract MockDapiProxy is IDapiProxy {
     int224 public answer;
     uint32 public updatedAt;
 
-    function read() external view override returns (int224 value, uint32 timestamp){
+    function read() external view override returns (int224 value, uint32 timestamp) {
         return (answer, updatedAt);
     }
 

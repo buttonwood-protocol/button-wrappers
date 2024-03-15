@@ -5,7 +5,9 @@ import { ethers, waffle } from 'hardhat'
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockStaderOracle = await (await ethers.getContractFactory('MockStaderOracle'))
+  const mockStaderOracle = await (
+    await ethers.getContractFactory('MockStaderOracle')
+  )
     .connect(deployer)
     .deploy()
   // deploy contract to test

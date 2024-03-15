@@ -1,11 +1,11 @@
-import {task, types} from "hardhat/config";
-import {TaskArguments} from "hardhat/types";
+import { task, types } from 'hardhat/config'
+import { TaskArguments } from 'hardhat/types'
 
 task('deploy:ChainlinkOracle')
   .addParam('aggregator', 'the address of the backing chainlink aggregator')
   .addParam('stalenessthresholdsecs', 'the number of seconds before refresh')
   .setAction(async function (args: TaskArguments, hre) {
-    const {aggregator, stalenessthresholdsecs} = args
+    const { aggregator, stalenessthresholdsecs } = args
     const ChainlinkOracle = await hre.ethers.getContractFactory(
       'ChainlinkOracle',
     )
@@ -33,7 +33,7 @@ task('verify:ChainlinkOracle')
   .addParam('aggregator', 'the address of the backing chainlink aggregator')
   .addParam('stalenessthresholdsecs', 'the number of seconds before refresh')
   .setAction(async function (args: TaskArguments, hre) {
-    const {address, aggregator, stalenessthresholdsecs} = args
+    const { address, aggregator, stalenessthresholdsecs } = args
 
     await hre.run('verify:verify', {
       address,

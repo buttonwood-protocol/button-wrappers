@@ -5,11 +5,15 @@ import { ethers, waffle } from 'hardhat'
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockRSETHRateReceiver = await (await ethers.getContractFactory('MockRSETHRateReceiver'))
+  const mockRSETHRateReceiver = await (
+    await ethers.getContractFactory('MockRSETHRateReceiver')
+  )
     .connect(deployer)
     .deploy()
   // deploy contract to test
-  const oracle = await (await ethers.getContractFactory('RSETHRateReceiverOracle'))
+  const oracle = await (
+    await ethers.getContractFactory('RSETHRateReceiverOracle')
+  )
     .connect(deployer)
     .deploy(mockRSETHRateReceiver.address)
   // need a contract with a non-view method that calls oracle.getData so we can gas test
@@ -48,9 +52,9 @@ describe('RSETHRateReceiverOracle', function () {
           .setRate(
             BigNumber.from('7091831834635293267033248')
               .mul('1000000000000000000')
-              .div(BigNumber.from('6413278131285121422182816'))
+              .div(BigNumber.from('6413278131285121422182816')),
           ),
-      ).to.not.be.reverted;
+      ).to.not.be.reverted
 
       const tx = await mockOracleDataFetcher.connect(user).fetch()
       const receipt = await tx.wait()

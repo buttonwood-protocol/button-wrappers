@@ -117,8 +117,8 @@ export default {
       accounts: process.env.ARB_PROD_PKEY
         ? [process.env.ARB_PROD_PKEY]
         : {
-          mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
-        },
+            mnemonic: process.env.PROD_MNEMONIC || DEFAULT_MNEMONIC,
+          },
       chainId: 42161,
     },
   },

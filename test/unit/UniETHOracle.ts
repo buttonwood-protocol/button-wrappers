@@ -5,7 +5,9 @@ import { ethers, waffle } from 'hardhat'
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockRockXStaking = await (await ethers.getContractFactory('MockRockXStaking'))
+  const mockRockXStaking = await (
+    await ethers.getContractFactory('MockRockXStaking')
+  )
     .connect(deployer)
     .deploy()
   // deploy contract to test
@@ -68,14 +70,10 @@ describe('UniETHOracle', function () {
         await waffle.loadFixture(mockedOracle)
 
       await expect(
-        mockRockXStaking
-          .connect(user)
-          .setXETHAmount(BigNumber.from('0')),
+        mockRockXStaking.connect(user).setXETHAmount(BigNumber.from('0')),
       ).to.not.be.reverted
       await expect(
-        mockRockXStaking
-          .connect(user)
-          .setETHReserve(BigNumber.from('0')),
+        mockRockXStaking.connect(user).setETHReserve(BigNumber.from('0')),
       ).to.not.be.reverted
 
       const tx = await mockOracleDataFetcher.connect(user).fetch()

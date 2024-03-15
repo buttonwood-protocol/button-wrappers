@@ -5,7 +5,9 @@ import { ethers, waffle } from 'hardhat'
 async function mockedOracle() {
   const [deployer, user] = await ethers.getSigners()
   // deploy mocks
-  const mockInceptionVault = await (await ethers.getContractFactory('MockInceptionVault'))
+  const mockInceptionVault = await (
+    await ethers.getContractFactory('MockInceptionVault')
+  )
     .connect(deployer)
     .deploy()
   // deploy contract to test
@@ -58,7 +60,10 @@ describe('InceptionTokenOracle', function () {
       const [value, valid] = await mockOracleDataFetcher.getData()
 
       // uniETH denominated in ETH should be ETHReserve/XETHAmount
-      expect(value.toString()).to.be.closeTo(BigNumber.from('1105804502698871756'),BigNumber.from('1'))
+      expect(value.toString()).to.be.closeTo(
+        BigNumber.from('1105804502698871756'),
+        BigNumber.from('1'),
+      )
       expect(valid).to.eq(true)
       expect(receipt.gasUsed.toString()).to.equal('82168')
     })
@@ -73,9 +78,7 @@ describe('InceptionTokenOracle', function () {
           .setInceptionTokenSupply(BigNumber.from('0')),
       ).to.not.be.reverted
       await expect(
-        mockInceptionVault
-          .connect(user)
-          .setTotalDeposited(BigNumber.from('0')),
+        mockInceptionVault.connect(user).setTotalDeposited(BigNumber.from('0')),
       ).to.not.be.reverted
 
       const tx = await mockOracleDataFetcher.connect(user).fetch()

@@ -51,11 +51,11 @@ task('verify:SavaxOracle:prefilled', 'Verifies on snowtrace')
   .setAction(async function (args: TaskArguments, hre) {
     console.log('chainId:', hre.network.config.chainId)
     console.log('Network:', hre.network.name)
-    let savax;
+    let savax
     if (hre.network.name === 'fuji') {
-      savax = argsFuji.savax;
+      savax = argsFuji.savax
     } else if (hre.network.name === 'avalanche') {
-      savax = argsAvalanche.savax;
+      savax = argsAvalanche.savax
     } else {
       throw new Error('Network not supported')
     }
@@ -65,8 +65,7 @@ task('verify:SavaxOracle:prefilled', 'Verifies on snowtrace')
       address,
       constructorArguments: [savax],
     })
-  },
-)
+  })
 
 task('verify:SavaxOracle', 'Verifies on snowtrace')
   .addParam('address', 'the contract address', undefined, types.string, false)

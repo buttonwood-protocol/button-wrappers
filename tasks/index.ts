@@ -1,3 +1,3 @@
-import './deployers'
-import './accounts'
-import './clean'
+import './deployers';
+import './accounts';
+import './clean';

@@ -1,15 +1,15 @@
-import './test/utils/loadDotEnv'
-import { HardhatUserConfig } from 'hardhat/config'
-import { Wallet } from 'ethers'
-import '@nomiclabs/hardhat-ethers'
-import '@nomiclabs/hardhat-waffle'
-import '@openzeppelin/hardhat-upgrades'
-import '@nomiclabs/hardhat-etherscan'
-import 'solidity-coverage'
-import 'hardhat-gas-reporter'
-import './tasks'
+import './test/utils/loadDotEnv';
+import { HardhatUserConfig } from 'hardhat/config';
+import { Wallet } from 'ethers';
+import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-waffle';
+import '@openzeppelin/hardhat-upgrades';
+import '@nomiclabs/hardhat-etherscan';
+import 'solidity-coverage';
+import 'hardhat-gas-reporter';
+import './tasks';
 
-const DEFAULT_MNEMONIC = Wallet.createRandom().mnemonic.phrase
+const DEFAULT_MNEMONIC = Wallet.createRandom().mnemonic.phrase;
 
 export default {
   etherscan: {
@@ -144,4 +144,4 @@ export default {
     excludeContracts: ['mocks/'],
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
-} as HardhatUserConfig
+} as HardhatUserConfig;

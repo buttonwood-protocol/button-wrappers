@@ -1,5 +1,5 @@
-import { task, types } from 'hardhat/config'
-import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types'
+import { task, types } from 'hardhat/config';
+import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types';
 
 const prefilledArgs: Record<string, TaskArguments> = {
   mainnet: {
@@ -18,7 +18,7 @@ const prefilledArgs: Record<string, TaskArguments> = {
       inceptionvault: '0x',
     },
   },
-}
+};
 
 task('deploy:InceptionTokenOracle:prefilled', 'Verifies on etherscan')
   .addParam(
@@ -29,19 +29,19 @@ task('deploy:InceptionTokenOracle:prefilled', 'Verifies on etherscan')
     false,
   )
   .setAction(async function (args: TaskArguments, hre) {
-    const { underlying } = args
-    console.log('chainId:', hre.network.config.chainId)
-    console.log('Network:', hre.network.name)
-    console.log('Underlying:', underlying)
-    const prefilled = prefilledArgs[hre.network.name][underlying]
+    const { underlying } = args;
+    console.log('chainId:', hre.network.config.chainId);
+    console.log('Network:', hre.network.name);
+    console.log('Underlying:', underlying);
+    const prefilled = prefilledArgs[hre.network.name][underlying];
     if (!prefilled) {
-      throw new Error('Network not supported')
+      throw new Error('Network not supported');
     }
 
-    const { inceptionvault } = prefilled
-    console.log('InceptionVault Address:', inceptionvault)
-    await hre.run('deploy:InceptionTokenOracle', { inceptionvault })
-  })
+    const { inceptionvault } = prefilled;
+    console.log('InceptionVault Address:', inceptionvault);
+    await hre.run('deploy:InceptionTokenOracle', { inceptionvault });
+  });
 
 task('deploy:InceptionTokenOracle')
   .addParam(
@@ -52,28 +52,31 @@ task('deploy:InceptionTokenOracle')
     false,
   )
   .setAction(async function (args: TaskArguments, hre) {
-    const { inceptionvault } = args
-    console.log('Signer', await (await hre.ethers.getSigners())[0].getAddress())
+    const { inceptionvault } = args;
+    console.log(
+      'Signer',
+      await (await hre.ethers.getSigners())[0].getAddress(),
+    );
     const InceptionTokenOracle = await hre.ethers.getContractFactory(
       'InceptionTokenOracle',
-    )
+    );
     const inceptionTokenOracle = await InceptionTokenOracle.deploy(
       inceptionvault,
-    )
-    await inceptionTokenOracle.deployed()
+    );
+    await inceptionTokenOracle.deployed();
     console.log(
       `inceptionTokenOracle deployed to ${inceptionTokenOracle.address}`,
-    )
+    );
 
     try {
       await hre.run('verify:verify', {
         address: inceptionTokenOracle.address,
         constructorArguments: [inceptionvault],
-      })
+      });
     } catch (e) {
-      console.log('Unable to verify on etherscan', e)
+      console.log('Unable to verify on etherscan', e);
     }
-  })
+  });
 
 task('verify:InceptionTokenOracle:prefilled', 'Verifies on etherscan')
   .addParam(
@@ -85,22 +88,22 @@ task('verify:InceptionTokenOracle:prefilled', 'Verifies on etherscan')
   )
   .addParam('address', 'the contract address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
-    const { underlying, address } = args
-    console.log('chainId:', hre.network.config.chainId)
-    console.log('Network:', hre.network.name)
-    console.log('Underlying:', underlying)
+    const { underlying, address } = args;
+    console.log('chainId:', hre.network.config.chainId);
+    console.log('Network:', hre.network.name);
+    console.log('Underlying:', underlying);
 
-    const prefilled = prefilledArgs[hre.network.name][underlying]
+    const prefilled = prefilledArgs[hre.network.name][underlying];
     if (!prefilled) {
-      throw new Error('Network not supported')
+      throw new Error('Network not supported');
     }
-    const { inceptionVault } = prefilled
+    const { inceptionVault } = prefilled;
 
     await hre.run('verify:verify', {
       address,
       constructorArguments: [inceptionVault],
-    })
-  })
+    });
+  });
 
 task('verify:InceptionTokenOracle', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
@@ -112,10 +115,10 @@ task('verify:InceptionTokenOracle', 'Verifies on etherscan')
     false,
   )
   .setAction(async function (args: TaskArguments, hre) {
-    const { address, inceptionvault } = args
+    const { address, inceptionvault } = args;
 
     await hre.run('verify:verify', {
       address,
       constructorArguments: [inceptionvault],
-    })
-  })
+    });
+  });

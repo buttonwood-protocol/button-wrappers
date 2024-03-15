@@ -37,7 +37,11 @@ contract API3Oracle is IOracle {
      */
     function getData() external view override returns (uint256, bool) {
         (int224 value, uint32 timestamp) = oracle.read();
+        // Return invalid if value cannot be converted into a uint256
+        if (value < 0) {
+            return (0, false);
+        }
         uint256 diff = block.timestamp - uint256(timestamp);
-        return (uint256(value), diff <= stalenessThresholdSecs);
+        return (uint256(int256(value)), diff <= stalenessThresholdSecs);
     }
 }

@@ -1,5 +1,5 @@
-import { task, types } from 'hardhat/config'
-import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types'
+import { task, types } from 'hardhat/config';
+import { HardhatRuntimeEnvironment, TaskArguments } from 'hardhat/types';
 
 const prefilledArgs: Record<string, TaskArguments> = {
   mainnet: {
@@ -8,22 +8,22 @@ const prefilledArgs: Record<string, TaskArguments> = {
   goerli: {
     staderoracle: '0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80',
   },
-}
+};
 
 task('deploy:ETHxOracle:prefilled', 'Verifies on etherscan').setAction(
   async function (args: TaskArguments, hre) {
-    console.log('chainId:', hre.network.config.chainId)
-    console.log('Network:', hre.network.name)
-    const prefilled = prefilledArgs[hre.network.name]
+    console.log('chainId:', hre.network.config.chainId);
+    console.log('Network:', hre.network.name);
+    const prefilled = prefilledArgs[hre.network.name];
     if (!prefilled) {
-      throw new Error('Network not supported')
+      throw new Error('Network not supported');
     }
 
-    const { staderoracle } = prefilled
-    console.log('staderOracle Address:', staderoracle)
-    await hre.run('deploy:ETHxOracle', { staderoracle })
+    const { staderoracle } = prefilled;
+    console.log('staderOracle Address:', staderoracle);
+    await hre.run('deploy:ETHxOracle', { staderoracle });
   },
-)
+);
 
 task('deploy:ETHxOracle')
   .addParam(
@@ -34,42 +34,45 @@ task('deploy:ETHxOracle')
     false,
   )
   .setAction(async function (args: TaskArguments, hre) {
-    const { staderoracle } = args
-    console.log('Signer', await (await hre.ethers.getSigners())[0].getAddress())
-    const ETHxOracle = await hre.ethers.getContractFactory('ETHxOracle')
-    const eTHxOracle = await ETHxOracle.deploy(staderoracle)
-    await eTHxOracle.deployed()
-    console.log(`ETHxOracle deployed to ${eTHxOracle.address}`)
+    const { staderoracle } = args;
+    console.log(
+      'Signer',
+      await (await hre.ethers.getSigners())[0].getAddress(),
+    );
+    const ETHxOracle = await hre.ethers.getContractFactory('ETHxOracle');
+    const eTHxOracle = await ETHxOracle.deploy(staderoracle);
+    await eTHxOracle.deployed();
+    console.log(`ETHxOracle deployed to ${eTHxOracle.address}`);
 
     try {
       await hre.run('verify:verify', {
         address: eTHxOracle.address,
         constructorArguments: [staderoracle],
-      })
+      });
     } catch (e) {
-      console.log('Unable to verify on etherscan', e)
+      console.log('Unable to verify on etherscan', e);
     }
-  })
+  });
 
 task('verify:ETHxOracle:prefilled', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
   .setAction(async function (args: TaskArguments, hre) {
-    console.log('chainId:', hre.network.config.chainId)
-    console.log('Network:', hre.network.name)
+    console.log('chainId:', hre.network.config.chainId);
+    console.log('Network:', hre.network.name);
 
-    const prefilled = prefilledArgs[hre.network.name]
+    const prefilled = prefilledArgs[hre.network.name];
     if (!prefilled) {
-      throw new Error('Network not supported')
+      throw new Error('Network not supported');
     }
-    const { staderoracle } = prefilled
+    const { staderoracle } = prefilled;
 
-    const { address } = args
+    const { address } = args;
 
     await hre.run('verify:verify', {
       address,
       constructorArguments: [staderoracle],
-    })
-  })
+    });
+  });
 
 task('verify:ETHxOracle', 'Verifies on etherscan')
   .addParam('address', 'the contract address', undefined, types.string, false)
@@ -81,10 +84,10 @@ task('verify:ETHxOracle', 'Verifies on etherscan')
     false,
   )
   .setAction(async function (args: TaskArguments, hre) {
-    const { address, staderoracle } = args
+    const { address, staderoracle } = args;
 
     await hre.run('verify:verify', {
       address,
       constructorArguments: [staderoracle],
-    })
-  })
+    });
+  });
